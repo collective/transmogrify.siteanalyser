@@ -30,5 +30,7 @@ setup(name='transmogrify.webcrawler',
           'collective.transmogrifier',
           ],
       entry_points="""
+            [z3c.autoinclude.plugin]
+            target = transmogrify
             """,
             )

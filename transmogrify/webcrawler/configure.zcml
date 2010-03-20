@@ -7,10 +7,9 @@
 
 
 	  <include package="collective.transmogrifier" file="meta.zcml"/>
-<!--	  <include package="collective.transmogrifier"/> -->
 
-    <utility component=".webcrawler.WebCrawler"
-             name="transmogrify.webcrawler" />
+    <utility component=".isindex.IsIndex"
+             name="transmogrify.defaultpageanalyser" />
 
 
 </configure>
