@@ -10,7 +10,7 @@ import urlparse
 import re
 import logging
 logger = logging.getLogger('Plone')
-from treeserializer import TreeSerializer
+from transmogrify.pathsorter.treeserializer import TreeSerializer
 
 """
 Backlinks Title

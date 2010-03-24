@@ -1,0 +1,23 @@
+<configure
+    xmlns="http://namespaces.zope.org/zope"
+    i18n_domain="pretaweb.funnelweb"
+    xmlns:five="http://namespaces.zope.org/five"
+    xmlns:genericsetup="http://namespaces.zope.org/genericsetup"
+    >
+
+
+	  <include package="collective.transmogrifier" file="meta.zcml"/>
+
+    <utility component=".isindex.IsIndex"
+             name="transmogrify.siteanalyser.defaultpage" />
+
+   <utility component=".relinker.Relinker"
+             name="transmogrify.siteanalyser.relinker" />
+
+   <utility component=".makeattachments.MakeAttachments"
+             name="transmogrify.siteanalyser.attach" />
+
+   <utility component=".backlinkstitle.BacklinksTitle"
+             name="transmogrify.siteanalyser.title" />
+
+</configure>

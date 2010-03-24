@@ -1,12 +1,12 @@
 from setuptools import setup, find_packages
 import os
 
-version = '0.2'
+version = '1.0a1'
 
-setup(name='transmogrify.webcrawler',
+setup(name='transmogrify.siteanalyser',
       version=version,
-      description="",
-      long_description=open(os.path.join("transmogrify", "webcrawler", "webcrawler.txt")).read() + "\n" +
+      description="transmogrifier source blueprints for crawling html",
+      long_description=open(os.path.join("transmogrify", "siteanalyser", "README.txt")).read() + "\n" +
                        open(os.path.join("docs", "HISTORY.txt")).read(),
       # Get more strings from http://www.python.org/pypi?%3Aaction=list_classifiers
       classifiers=[
@@ -28,6 +28,7 @@ setup(name='transmogrify.webcrawler',
           'lxml',
           'BeautifulSoup',
           'collective.transmogrifier',
+          'plone.i18n'
           ],
       entry_points="""
             [z3c.autoinclude.plugin]
