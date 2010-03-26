@@ -24,7 +24,7 @@ Our condition ensures in this doesn't produce a move there are only one subitem.
 ...     printer
 ...     
 ... [source]
-... blueprint = transmogrify.webcrawler.test.htmlbacklinksource
+... blueprint = transmogrify.htmltesting.htmlbacklinksource
 ... level3/index=<a href="../level2/index">Level 2</a>
 ... level2/index=<a href="../level3/index">Level 3</a><img src="+&image%20blah">
 ... level2/+&image%20blah=<h1>content</h1>
