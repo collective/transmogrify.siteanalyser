@@ -151,11 +151,10 @@ class IsIndex(object):
 
 
     def ishtml(self, item):
-              path = item.get('_path',None)
-              content = item.get('_content',None) or item.get('text',None)
-              mimetype = item.get('_mimetype',None)
-              if  path and content and mimetype in ['text/xhtml', 'text/html']:
-                  return path,content
-              else:
-                  return None,None
-       
+        path = item.get('_path', None)
+        content = item.get('_content', None) or item.get('text',None)
+        mimetype = item.get('_mimetype', None)
+        if  path and content and mimetype in ['text/xhtml', 'text/html']:
+            return path, content
+        else:
+            return None, None
