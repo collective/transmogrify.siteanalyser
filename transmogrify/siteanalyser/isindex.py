@@ -1,4 +1,3 @@
-
 import fnmatch
 from zope.interface import classProvides
 from zope.interface import implements
@@ -16,40 +15,34 @@ import logging
 logger = logging.getLogger('Plone')
 
 
-
 class IsIndex(object):
     classProvides(ISectionBlueprint)
     implements(ISection)
 
-
-
     def __init__(self, transmogrifier, name, options, previous):
         self.previous = previous
-        self.min_links=options.get('min_links',2)
-        self.max_uplinks=options.get('max_uplinks',2)
+        self.min_links = options.get('min_links', 2)
+        self.max_uplinks = options.get('max_uplinks', 2)
             
-
     def __iter__(self):
-      
-        #Stri
-      
-                    
-        self.moved= {}
+        self.moved = {}
         items = {}
         ulinks = {}
         for item in self.previous:
-            path,html = self.ishtml(item)
+            path, html = self.ishtml(item)
             if not path:
                 yield item
                 continue
             
             tree = lxml.html.fragment_fromstring(html)
-            base = item.get('_site_url','')
+            base = item.get('_site_url', '')
             tree.make_links_absolute(base+path)
             if '_origin' in item:
                 self.moved[item['_origin']] = path
+                
+            # collect all links on a page
             links = []
-            items[path] = (item,path,links)
+            items[path] = (item, path, links)
             for element, attribute, link, pos in tree.iterlinks():
                 if attribute == 'href' and link not in ulinks:
                     ulinks[link] = True
@@ -57,89 +50,109 @@ class IsIndex(object):
                         link = link[len(base):]
                     link = '/'.join([p for p in link.split('/') if p])
                     links.append(link)
+        
+        # move pages into it's containers if needed;
+        # we define it here by number of links pointing to this or another
+        # folder, wins that page which has more links ponting to a folder
         done = []
         while items:
             indexes = {}
-            for item,path,links in items.values():
+            for item, path, links in items.values():
                 if not links:
                     continue
                 count, dir, rest = self.indexof(links)
-                print >>stderr, (count,len(links),dir,path,item.get('_template'), rest)
-                if self.isindex(count,links):
-                    indexes.setdefault(dir,[]).append((count,item,path,links,dir))
-    
-            mostdeep = [(len(dir.split('/')),i) for dir,i in indexes.items()]
+                print >> stderr, (count, len(links), dir, path,
+                                  item.get('_template'), rest)
+                if self.isindex(count, links):
+                    indexes.setdefault(dir, []).append((count, item, path,
+                                                        links, dir))
+            
+            # get the deepest folder and move appropriate items into it
+            mostdeep = [(len(dir.split('/')), i) for dir, i in indexes.items()]
             if not mostdeep:
                 break
             mostdeep.sort()
-            depth,winner = mostdeep[-1]
+            depth, winner = mostdeep[-1]
             self.move(winner)
-            for count,item,path,links,dir in winner:
+            for count, item, path, links, dir in winner:
                 del items[path]
                 yield item
-        for item,path,links in items.values():
+        
+        # yield any left items, those ones that don't have links to any folders
+        for item, path, links in items.values():
             yield item
-                    
-                
-                     
+
     def move(self, items):
-        if not items: return
+        if not items:
+            return
         items.sort()
-        count,item,toppath,links,dir = items[-1]
-        for count,item,path,links,dir in items:
-            if False: #path == toppath: #TODO need a better way to work out default view
+        
+        # hm, not sure why do we need next line here?
+        count, item, toppath, links, dir = items[-1]
+        
+        for count, item, path, links, dir in items:
+            # TODO: need a better way to work out default view
+            if False: #path == toppath:
                 file = 'index_html'
             else:
                 file = path.split('/')[-1]
             
             if dir:
-                target = dir+'/'+file
+                target = dir + '/' + file
             else:
                 target = file
+            
             if item['_path'] == target:
                 continue
-            item.setdefault('_origin',path)
+            
+            item.setdefault('_origin', path)
             item['_path'] = target
                 
             self.moved[path] = item['_path']
-            msg = "isindex: moved %s to %s" %(path,dir+'/'+file)
+            msg = "isindex: moved %s to %s/%s" % (path, dir, file)
             logger.log(logging.DEBUG, msg)
 
     def isindex(self, count, links):
-        return count >= self.min_links and count>=len(links)-self.max_uplinks
-            
+        return count >= self.min_links and \
+               count >= len(links) - self.max_uplinks
 
     def indexof(self, links):
         dirs = {}
         def most(count):
-            return self.isindex(count,links)
+            return self.isindex(count, links)
 
+        # collect directories based on a page links
         for link in links:
             newlink = self.moved.get(link)
             if newlink:
                 link = newlink
-                
             dir = '/'.join([p for p in link.split('/') if p][:-1])
-            dirs[dir] = dirs.get(dir,0) + 1
+            dirs[dir] = dirs.get(dir, 0) + 1
+        
+        # page has no links pointing to folders
         if not dirs:
-            return 0,None
+            return 0, None, dirs
+        
         alldirs = dirs
         while True:
-            tops = [(count,dir) for dir,count in dirs.items()]
+            tops = [(count, dir) for dir, count in dirs.items()]
             tops.sort()
-            count,dir = tops[-1]
-            if most(count) or len(tops)<2:
+            count, dir = tops[-1]
+            
+            # check if we already found top directory our page is referencing to
+            if most(count) or len(tops) < 2:
                 break
-            #find common dir. Take longest and make it shorter
-            common = [(dir,count) for count,dir in tops]
+            
+            # find common dir; take the longest path and make it shorter
+            common = [(dir, count) for count, dir in tops]
             common.sort()
             common.reverse()
-            longdir,longcount = common[0]
+            longdir, longcount = common[0]
             longdir = '/'.join(longdir.split('/')[:-1])
             dirs = dict(common[1:])
-            dirs[longdir] = dirs.get(longdir,0) + longcount
+            dirs[longdir] = dirs.get(longdir, 0) + longcount
             
-        return count,dir, alldirs
+        return count, dir, alldirs
     
 #            tops = []
 #            found = False
