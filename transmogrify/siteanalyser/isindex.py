@@ -39,7 +39,7 @@ class IsIndex(object):
             tree.make_links_absolute(base+path)
             if '_origin' in item:
                 self.moved[item['_origin']] = path
-                
+            
             # collect all links on a page
             links = []
             items[path] = (item, path, links)
@@ -87,7 +87,7 @@ class IsIndex(object):
             return
         items.sort()
         
-        # hm, not sure why do we need next line here?
+        # hm, not sure why do we need the next line here?
         count, item, toppath, links, dir = items[-1]
         
         for count, item, path, links, dir in items:
@@ -165,7 +165,7 @@ class IsIndex(object):
 
     def ishtml(self, item):
         path = item.get('_path', None)
-        content = item.get('_content', None) or item.get('text',None)
+        content = item.get('_content', None) or item.get('text', None)
         mimetype = item.get('_mimetype', None)
         if  path and content and mimetype in ['text/xhtml', 'text/html']:
             return path, content
