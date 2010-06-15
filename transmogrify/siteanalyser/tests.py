@@ -1,4 +1,3 @@
-
 import unittest
 
 from zope.testing import doctest
@@ -19,14 +18,9 @@ from collective.transmogrifier.tests import tearDown
 from collective.transmogrifier.sections.tests import PrettyPrinter
 from collective.transmogrifier.sections.tests import SampleSource
 
-from transmogrify.webcrawler.webcrawler import WebCrawler
-from transmogrify.webcrawler.treeserializer import TreeSerializer
-from transmogrify.webcrawler.typerecognitor import TypeRecognitor
-from transmogrify.webcrawler.safeportaltransforms import  SafePortalTransforms
-from transmogrify.webcrawler.makeattachments import MakeAttachments
-from templatefinder import TemplateFinder
-from transmogrify.webcrawler.relinker import Relinker
-from transmogrify.webcrawler.simplexpath import SimpleXPath
+#from transmogrify.webcrawler.webcrawler import WebCrawler
+#from transmogrify.siteanalyser.makeattachments import MakeAttachments
+#from transmogrify.siteanalyser.relinker import Relinker
 from plone.i18n.normalizer import urlnormalizer
 from lxml import etree
 import lxml.html
@@ -123,45 +117,25 @@ def setUp(test):
 
     provideUtility(PrettyPrinter,
         name=u'collective.transmogrifier.sections.tests.pprinter')
-    provideUtility(WebCrawler,
-        name=u'transmogrify.webcrawler.webcrawler')
-    provideUtility(TreeSerializer,
-        name=u'transmogrify.webcrawler.treeserializer')
-    provideUtility(TypeRecognitor,
-        name=u'transmogrify.webcrawler.typerecognitor')
-    provideUtility(TemplateFinder,
-        name=u'transmogrify.webcrawler.templatefinder')
+    #provideUtility(WebCrawler,
+        #name=u'transmogrify.webcrawler.webcrawler')
     provideUtility(urlnormalizer)
-    provideUtility(Relinker,
-        name=u'transmogrify.webcrawler.relinker')
-    provideUtility(SimpleXPath,
-        name=u'transmogrify.webcrawler.simplexpath')
-    provideUtility(SafePortalTransforms,
-        name=u'transmogrify.webcrawler.safeportaltransforms')
-    from backlinkstitle import BacklinksTitle
-    provideUtility(BacklinksTitle,
-        name=u'transmogrify.webcrawler.backlinkstitle')
+    #provideUtility(Relinker,
+        #name=u'transmogrify.webcrawler.relinker')
+    #provideUtility(SafePortalTransforms,
+        #name=u'transmogrify.webcrawler.safeportaltransforms')
+    #from backlinkstitle import BacklinksTitle
+    #provideUtility(BacklinksTitle,
+        #name=u'transmogrify.webcrawler.backlinkstitle')
     from isindex import IsIndex
     provideUtility(IsIndex,
         name=u'transmogrify.webcrawler.isindex')
-    from pathmover import PathMover
-    provideUtility(PathMover,
-        name=u'transmogrify.webcrawler.pathmover')
-    from safeatschemaupdater import SafeATSchemaUpdaterSection
-    provideUtility(SafeATSchemaUpdaterSection,
-        name=u'transmogrify.webcrawler.safeatschemaupdater')
-    from constructor import SafeConstructorSection
-    provideUtility(SafeConstructorSection,
-        name=u'transmogrify.webcrawler.constructor')
-    from makeattachments import MakeAttachments
-    provideUtility(MakeAttachments,
-        name=u'transmogrify.webcrawler.makeattachments')
-    from debugsection import DebugSection
-    provideUtility(DebugSection,
-        name=u'transmogrify.webcrawler.debugsection')
-    from staticcreator import StaticCreatorSection
-    provideUtility(StaticCreatorSection,
-        name=u'transmogrify.webcrawler.staticcreator')
+    #from makeattachments import MakeAttachments
+    #provideUtility(MakeAttachments,
+        #name=u'transmogrify.webcrawler.makeattachments')
+    #from debugsection import DebugSection
+    #provideUtility(DebugSection,
+        #name=u'transmogrify.webcrawler.debugsection')
 
     provideUtility(HTMLSource,
         name=u'transmogrify.webcrawler.test.htmlsource')
@@ -247,10 +221,10 @@ def MakeAttachmentsSetUp(test):
                  'image': 'subitem2 image content',
                  '_type': 'Image'},
             )
-    provideUtility(MakeAttachmentsSource,
-        name=u'transmogrify.webcrawler.tests.makeattachments')
-    provideUtility(MakeAttachments,
-        name=u'transmogrify.webcrawler.makeattachments')
+    #provideUtility(MakeAttachmentsSource,
+        #name=u'transmogrify.webcrawler.tests.makeattachments')
+    #provideUtility(MakeAttachments,
+        #name=u'transmogrify.webcrawler.makeattachments')
 
 @onsetup
 def setup_product():
@@ -305,72 +279,18 @@ def test_suite():
                         doctest.NORMALIZE_WHITESPACE | doctest.REPORT_UDIFF
 
     return unittest.TestSuite((
-        doctest.DocFileSuite('webcrawler.txt', 
-                setUp=setUp, 
-                optionflags = flags,
-                tearDown=tearDown),
-
-#        doctest.DocFileSuite('treeserializer.txt', 
-#                setUp=setUp, 
-#                tearDown=tearDown, 
-#                optionflags=flags),
-#        doctest.DocFileSuite('typerecognitor.txt', 
-#                setUp=setUp, 
-#                optionflags = flags,
-#                tearDown=tearDown),
-#        doctest.DocFileSuite('templatefinder.txt', 
-#                setUp=setUp, 
-#                optionflags = flags,
-#                tearDown=tearDown),
-#        doctest.DocFileSuite('relinker.txt', 
-#                setUp=setUp, 
-#                optionflags = flags,
-#                tearDown=tearDown),
-#        doctest.DocFileSuite('pathmover.txt', 
-#                setUp=setUp, 
-#                optionflags = flags,
-#                tearDown=tearDown),
-#        doctest.DocFileSuite('simplexpath.txt', 
-#                setUp=setUp, 
-#                optionflags = flags,
-#                tearDown=tearDown),
-#        doctest.DocFileSuite('testsites.txt', 
-#                setUp=setUp,
-#                optionflags = flags,
-#                tearDown=tearDown),
-#        doctest.DocFileSuite('safeatschemaupdater.txt',
-#                setUp=SafeATSchemaUpdaterSetUp,
-#                optionflags = flags,
-#                tearDown=tearDown),
-#        doctest.DocFileSuite('makeattachments.txt',
-#                setUp=MakeAttachmentsSetUp,
-#                optionflags = flags,
-#                tearDown=tearDown),
-#        doctest.DocFileSuite('isindex.txt',
-#                setUp=MakeAttachmentsSetUp,
-#                optionflags = flags,
-#                tearDown=tearDown),
-#        doctest.DocFileSuite('safeportaltransforms.txt',
-#                setUp=MakeAttachmentsSetUp,
-#                optionflags = flags,
-#                tearDown=tearDown),
-#        ztc.FunctionalDocFileSuite(
-#            'README.txt',
-#             package='transmogrify.webcrawler',
-#             test_class=TestCase,
-##            tearDown=zc.buildout.testing.buildoutTearDown,
-#             optionflags = flags,
-#            #globs=globs,
-##            checker=renormalizing.RENormalizing([
-##               zc.buildout.testing.normalize_path,
-#               #zc.buildout.testing.normalize_script,
-#               #zc.buildout.testing.normalize_egg_py,
-#               #zc.buildout.tests.normalize_bang,
-# #              ]),
-#            ),
-
-
-
+       #doctest.DocFileSuite('relinker.txt', 
+               #setUp=setUp, 
+               #optionflags = flags,
+               #tearDown=tearDown),
+       #doctest.DocFileSuite('makeattachments.txt',
+               #setUp=MakeAttachmentsSetUp,
+               #optionflags = flags,
+               #tearDown=tearDown),
+       doctest.DocFileSuite('isindex.txt',
+               setUp=MakeAttachmentsSetUp,
+               optionflags = flags,
+               tearDown=tearDown),
     ))
 
 if __name__ == '__main__':
