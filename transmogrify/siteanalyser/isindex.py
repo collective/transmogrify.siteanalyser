@@ -1,18 +1,21 @@
 import fnmatch
+from StringIO import StringIO
+from sys import stderr
+
+import lxml.html
+import lxml.html.soupparser
+from lxml import etree
+
 from zope.interface import classProvides
 from zope.interface import implements
 from collective.transmogrifier.interfaces import ISectionBlueprint
 from collective.transmogrifier.interfaces import ISection
 from collective.transmogrifier.utils import Matcher
+from collective.transmogrifier.utils import Expression, Condition
+from transmogrify.pathsorter.treeserializer import TreeSerializer
 
-from lxml import etree
-import lxml.html
-import lxml.html.soupparser
-
-from StringIO import StringIO
-from sys import stderr
 import logging
-logger = logging.getLogger('Plone')
+logger = logging.getLogger('transmogrify.siteanalyser.isindex')
 
 
 class IsIndex(object):
@@ -23,9 +26,96 @@ class IsIndex(object):
         self.previous = previous
         self.min_links = options.get('min_links', 2)
         self.max_uplinks = options.get('max_uplinks', 2)
+        self.mode = options.get('mode', 'links')
+        if self.mode == 'path':
+            self.parent_path = Expression(options['parent_path'],
+                                          transmogrifier, name, options)
+            self.treeserializer = TreeSerializer(transmogrifier, name, options,
+                                                 previous)
             
     def __iter__(self):
+        # set common defaults
         self.moved = {}
+        
+        # generate source items based on selected mode
+        if self.mode == 'path':
+            source = self.index_by_path
+        # default mode is 'links'
+        else:
+            source = self.index_by_links
+        
+        # finally yield generated source items
+        for item in source():
+            yield item
+    
+    def index_by_path(self):
+        """This mode moves item based on it's url. Rule is defined by entered
+        parent_path option which is expression with access to item,
+        transmogrifier, name, options and modules variables.
+        Returned value is used to find possible parent item by path. If found,
+        item is moved to that parent item, parent item _defaultpage key is set
+        appropriately, and we turn to processing another item in a pipeline. So
+        the first item in pipeline will take precedence in case parent_path rule
+        returns more than one item for the same parent.
+        """
+        # collect items mapping to have an easy access to paths
+        items = {}
+        for item in self.treeserializer:
+            path = item.get('_path', None)
+            if path is None:
+                yield item
+                continue
+            
+            if '_origin' in item:
+                self.moved[item['_origin']] = path
+            
+            items[path] = item
+        
+        # main job is done in this cycle
+        for path, item in items.items():
+            parent_path = self.parent_path(item)
+            if parent_path == path:
+                continue
+            
+            if parent_path in items:
+                parent = items[parent_path]
+                
+                if parent.get('_defaultpage'):
+                    logger.log(logging.DEBUG, u"skip moving %s to %s because "
+                                              "container already has "
+                                              "_defaultpage assigned to %s" % (
+                               path, parent_path, parent.get('_defaultpage')))
+                else:
+                    # found default page, move it to it's parent and assign
+                    # _defaultpage key to that container
+                    # make sure item id is unique in a target container
+                    i = 1
+                    item_id = new_id = path.split('/')[-1]
+                    new_path = '%s/%s' % (parent_path, item_id)
+                    while new_path in items:
+                        new_id = "%s%s" % (item_id, i)
+                        new_path = '%s/%s' % (parent_path, item_id)
+                        i += 1
+                    parent['_defaultpage'] = new_id
+                    item['_path'] = new_path
+                    item['_origin'] = path
+                    self.moved[path] = item['_path']
+                    logger.log(logging.DEBUG, u"moved %s to %s/%s" % (path,
+                               parent_path, new_id))
+                    del items[path]
+                    yield item
+            else:
+                logger.log(logging.DEBUG, u"can't move %s to %s because "
+                                          "container not found" % (
+                                          path, parent_path))
+        
+        for item in items.values():
+            yield item
+    
+    def index_by_links(self):
+        """This mode parses item's content html code for links and moves it
+        to a folder to which found links point.
+        """
         items = {}
         ulinks = {}
         for item in self.previous:
@@ -34,7 +124,7 @@ class IsIndex(object):
                 yield item
                 continue
             
-            tree = lxml.html.fragment_fromstring(html)
+            tree = lxml.html.fragment_fromstring(html, create_parent=True)
             base = item.get('_site_url', '')
             tree.make_links_absolute(base+path)
             if '_origin' in item:
@@ -109,7 +199,7 @@ class IsIndex(object):
             item['_path'] = target
                 
             self.moved[path] = item['_path']
-            msg = "isindex: moved %s to %s/%s" % (path, dir, file)
+            msg = "moved %s to %s/%s" % (path, dir, file)
             logger.log(logging.DEBUG, msg)
 
     def isindex(self, count, links):
