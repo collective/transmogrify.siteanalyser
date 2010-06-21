@@ -66,7 +66,7 @@ class Relinker(object):
             
             def norm(part):
                 #TODO - don't normalize to existing names
-                if part[0] == '_':
+                if part.startswith('_'):
                     part = part[1:]+'-1'
                 # Get the information we require for normalization
                 keywords = dict(text=urllib.unquote_plus(part), locale=self.locale(item))
