@@ -98,7 +98,7 @@ class IsIndex(object):
                         i += 1
                     parent['_defaultpage'] = new_id
                     item['_path'] = new_path
-                    item['_origin'] = path
+                    item.setdefault('_origin', path)
                     self.moved[path] = item['_path']
                     logger.log(logging.DEBUG, u"moved %s to %s/%s" % (path,
                                parent_path, new_id))
