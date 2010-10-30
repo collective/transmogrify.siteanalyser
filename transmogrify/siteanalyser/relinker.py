@@ -10,6 +10,7 @@ import urllib
 from lxml import etree
 import lxml
 from urlparse import urljoin
+import urllib
 from external.relative_url import relative_url
 from sys import stderr
 from collective.transmogrifier.utils import Expression
@@ -116,6 +117,7 @@ def relinkHTML(item, changes, bad={}, link_expr=None):
         fragment = t[-1]
         t = t[:-1] + (newfragment,)
         link = urlparse.urlunparse(t)
+        link = urllib.quote(link)
         return link, fragment
     
     def replace(link):
@@ -137,7 +139,7 @@ def relinkHTML(item, changes, bad={}, link_expr=None):
             if link not in bad:
                 msg = "relinker: no match for %s in %s" % (link,path)
                 logger.log(logging.DEBUG, msg)
-                print >> stderr, msg
+                #print >> stderr, msg
             return swapfragment(relative_url(newbase, link), fragment)[0]
     
     tree = lxml.html.fragment_fromstring(item['text'])
