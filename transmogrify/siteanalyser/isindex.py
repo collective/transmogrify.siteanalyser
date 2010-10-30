@@ -150,22 +150,14 @@ class IsIndex(object):
                 if not links:
                     continue
                 count, dir, rest = self.indexof(links)
-<<<<<<< HEAD
-                #print >>stderr, (count,len(links),dir,path,item.get('_template'), rest)
-                if self.isindex(count,links):
-                    indexes.setdefault(dir,[]).append((count,item,path,links,dir))
-    
-            mostdeep = [(len(dir.split('/')),i) for dir,i in indexes.items()]
-=======
-                print >> stderr, (count, len(links), dir, path,
-                                  item.get('_template'), rest)
+#                print >> stderr, (count, len(links), dir, path,
+#                                  item.get('_template'), rest)
                 if self.isindex(count, links):
                     indexes.setdefault(dir, []).append((count, item, path,
                                                         links, dir))
             
             # get the deepest folder and move appropriate items into it
             mostdeep = [(len(dir.split('/')), i) for dir, i in indexes.items()]
->>>>>>> c7c9dd92a3540ad3e2435c86da5d07c08ed69582
             if not mostdeep:
                 break
             mostdeep.sort()
