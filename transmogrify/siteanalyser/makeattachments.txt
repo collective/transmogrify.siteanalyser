@@ -3,9 +3,11 @@ MakeAttachments
 
 Will look for items that are linked from just one place and also have no 
 other links out. These 'deadends' will then be moved 'into' the linking item.
+
 If the fields option is set to a list of tuples then these indicate changes
 to make to item to merge in the subitem. The head of the list will be used as
 the filename to relink any html links to.
+
 If no fields are set then a folder will be created, the item set as its default
 view and any subitems moved into that folder.
 
@@ -61,7 +63,7 @@ Add two more subitems and then we get attachments
  '_path': 'level3/index',
  '_site_url': 'http://test.com/',
  'text': '<a href="../level2/index">Level 2</a>'}
-    
+
 >>> config = """
 ... [transmogrifier]
 ... include = test
@@ -103,7 +105,7 @@ Add two more subitems and then we get attachments
  '_path': 'level3/index',
  '_site_url': 'http://test.com/',
  'text': '<a href="../level2/index">Level 2</a>'}
- 
+
 >>> config = """
 ... [transmogrifier]
 ... include = test2
@@ -145,6 +147,7 @@ Add two more subitems and then we get attachments
 
 It is possible to not use fields for attachments but rather use a folder with a 
 default view. Just set fields to False (default).
+
 >>> config = """
 ... [transmogrifier]
 ... include = test
@@ -155,7 +158,8 @@ default view. Just set fields to False (default).
 ... level2/index=<a href="../level3/index">Level 3</a><img src="+&image%20blah">
 ... level2/+&image%20blah=<h1>content</h1>
 ...
-... """ 
+... """
+
 >>> registerConfig(u'test4', config)
 >>> transmogrifier(u'test4')
 {'_type': 'Folder', '_site_url': 'http://test.com/', '_path': 'level2'}
@@ -249,6 +253,7 @@ Test content that isn't linked up to makes sure its still passed through
  'text': 'blah2'}
 
 You can use a combination of folder and field attachments
+
 >>> config = """
 ... [transmogrifier]
 ... pipeline =

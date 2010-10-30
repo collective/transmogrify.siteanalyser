@@ -42,7 +42,6 @@ class IsIndex(object):
             if not path:
                 yield item
                 continue
-            
             tree = lxml.html.fragment_fromstring(html)
             base = item.get('_site_url','')
             tree.make_links_absolute(base+path)
@@ -64,7 +63,7 @@ class IsIndex(object):
                 if not links:
                     continue
                 count, dir, rest = self.indexof(links)
-                print >>stderr, (count,len(links),dir,path,item.get('_template'), rest)
+                #print >>stderr, (count,len(links),dir,path,item.get('_template'), rest)
                 if self.isindex(count,links):
                     indexes.setdefault(dir,[]).append((count,item,path,links,dir))
     
