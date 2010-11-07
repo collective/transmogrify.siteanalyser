@@ -83,7 +83,8 @@ class Relinker(object):
                 origin = item['_origin'] = path
             item['_path'] = newpath
             # apply link_expr
-            self.link_expr(item)
+            if self.link_expr:
+                item['_path'] = self.link_expr(item)
             #normalize link
             link = urllib.unquote_plus(base+origin)
             #assert not changes.get(link,None), str((item,changes.get(base+origin,None)))
