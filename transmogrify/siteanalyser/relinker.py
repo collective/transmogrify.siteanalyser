@@ -82,6 +82,8 @@ class Relinker(object):
             if not origin:
                 origin = item['_origin'] = path
             item['_path'] = newpath
+            # apply link_expr
+            self.link_expr(item)
             #normalize link
             link = urllib.unquote_plus(base+origin)
             #assert not changes.get(link,None), str((item,changes.get(base+origin,None)))
@@ -90,7 +92,7 @@ class Relinker(object):
 
         for item in changes.values():
             if 'text' in item and item.get('_mimetype') in ['text/xhtml', 'text/html']:
-                relinkHTML(item, changes, bad, link_expr=self.link_expr)
+                relinkHTML(item, changes, bad)
             del item['_origin']
             #rewrite the backlinks too
             backlinks = item.get('_backlinks',[])
@@ -108,7 +110,7 @@ class Relinker(object):
     
             yield item
 
-def relinkHTML(item, changes, bad={}, link_expr=None):        
+def relinkHTML(item, changes, bad={}):        
     path = item['_path']
     oldbase = item['_site_url']+item['_origin']
     newbase = item['_site_url']+path
@@ -129,10 +131,7 @@ def relinkHTML(item, changes, bad={}, link_expr=None):
             linked = changes.get(link)
             
         if linked:
-            if link_expr:
-                linkedurl = item['_site_url']+link_expr(linked)
-            else:
-                linkedurl = item['_site_url']+linked['_path']
+            linkedurl = item['_site_url']+linked['_path']
             return swapfragment(relative_url(newbase, linkedurl), fragment)[0]
         else:
             #if path.count('commercial-part-codes.doc'):
@@ -142,7 +141,7 @@ def relinkHTML(item, changes, bad={}, link_expr=None):
                 #print >> stderr, msg
             return swapfragment(relative_url(newbase, link), fragment)[0]
     
-    tree = lxml.html.fragment_fromstring(item['text'])
+    tree = lxml.html.fragment_fromstring(item['text'], create_parent=True)
     tree.rewrite_links(replace, base_href=oldbase)
     item['text'] = etree.tostring(tree,pretty_print=True,encoding=unicode,method='html')
  #   except Exception:
