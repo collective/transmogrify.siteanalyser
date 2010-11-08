@@ -1,7 +1,13 @@
 Changelog
 =========
 
-1.0 - Unreleased
-----------------
+1.0b3 (2010-11-09)
+------------------
+
+- fix bug in quoting links in relinker
+
+
+1.0b2 (2010-11-08)
+------------------
 
 - Add conditions to site analyser blueprints

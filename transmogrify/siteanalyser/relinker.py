@@ -120,7 +120,6 @@ def relinkHTML(item, changes, bad={}):
         fragment = t[-1]
         t = t[:-1] + (newfragment,)
         link = urlparse.urlunparse(t)
-        link = urllib.quote(link)
         return link, fragment
     
     def replace(link):
