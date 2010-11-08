@@ -4,7 +4,7 @@ from zope.interface import classProvides
 from zope.interface import implements
 from collective.transmogrifier.interfaces import ISectionBlueprint
 from collective.transmogrifier.interfaces import ISection
-from collective.transmogrifier.utils import Matcher
+from collective.transmogrifier.utils import Matcher,Condition
 from urllib import unquote
 import urlparse
 import re
@@ -33,6 +33,8 @@ class BacklinksTitle(object):
         self.previous = previous
         self.toignore=options.get('ignore','next\nprevios\n').strip().split('\n')
         self.treeserializer = TreeSerializer(transmogrifier, name, options, previous)
+        self.condition = Condition(options.get('condition', 'python:True'),
+                                   transmogrifier, name, options)
 
     def __iter__(self):
         items = []
@@ -42,7 +44,10 @@ class BacklinksTitle(object):
             backlinks = item.get('_backlinks')
             title = item.get('title')
             defaultpage = item.get('_defaultpage')
-            if title:
+            if not self.condition(item):
+                items.append( item )
+                continue  
+            elif title:
                 items.append( item )
                 continue
             elif defaultpage:

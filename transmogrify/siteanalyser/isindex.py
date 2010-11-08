@@ -32,6 +32,9 @@ class IsIndex(object):
                                           transmogrifier, name, options)
             self.treeserializer = TreeSerializer(transmogrifier, name, options,
                                                  previous)
+        self.condition = Condition(options.get('condition', 'python:True'),
+                                   transmogrifier, name, options)
+        
             
     def __iter__(self):
         # set common defaults
@@ -62,7 +65,7 @@ class IsIndex(object):
         items = {}
         for item in self.treeserializer:
             path = item.get('_path', None)
-            if path is None:
+            if path is None or not self.condition(item):
                 yield item
                 continue
             
@@ -120,7 +123,7 @@ class IsIndex(object):
         ulinks = {}
         for item in self.previous:
             path, html = self.ishtml(item)
-            if not path:
+            if not path or not self.condition(item):
                 yield item
                 continue            
             tree = lxml.html.fragment_fromstring(html, create_parent=True)
