@@ -1,6 +1,11 @@
 Changelog
 =========
 
+1.0b4 (2010-11-11)
+------------------
+
+- fix bug where _defaultpage wasn't being relinked
+
 1.0b3 (2010-11-09)
 ------------------
 

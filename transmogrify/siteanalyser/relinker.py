@@ -92,6 +92,16 @@ class Relinker(object):
             changes[link] = item
 
         for item in changes.values():
+            if '_defaultpage' in item:
+                index = item['_site_url']+item['_origin']+'/'+item['_defaultpage']
+                newindex = changes.get(index)
+                #need to work out if the new index is still in this folder
+                if newindex['_path'].startswith(item['_path']):
+                    item['_defaultpage'] = newindex['_path'][len(item['_path']):].lstrip('/')
+                else:
+                    # index moved elsewhere so defaultpage setting is off
+                    del item['_defaultpage']
+                    
             if 'text' in item and item.get('_mimetype') in ['text/xhtml', 'text/html']:
                 relinkHTML(item, changes, bad)
             del item['_origin']
@@ -142,7 +152,10 @@ def relinkHTML(item, changes, bad={}):
             return swapfragment(relative_url(newbase, link), fragment)[0]
     
     tree = lxml.html.fragment_fromstring(item['text'], create_parent=True)
-    tree.rewrite_links(replace, base_href=oldbase)
+    try:
+        tree.rewrite_links(replace, base_href=oldbase)
+    except:
+        import pdb; pdb.set_trace()
     item['text'] = etree.tostring(tree,pretty_print=True,encoding=unicode,method='html')
  #   except Exception:
  #       msg = "ERROR: relinker parse error %s, %s" % (path,str(Exception))
