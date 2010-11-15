@@ -96,9 +96,10 @@ class Relinker(object):
                 index = item['_site_url']+item['_origin']+'/'+item['_defaultpage']
                 newindex = changes.get(index)
                 #need to work out if the new index is still in this folder
-                if newindex['_path'].startswith(item['_path']):
+                if newindex is not None and newindex['_path'].startswith(item['_path']):
                     item['_defaultpage'] = newindex['_path'][len(item['_path']):].lstrip('/')
                 else:
+                    # why was it set then?? #TODO
                     # index moved elsewhere so defaultpage setting is off
                     del item['_defaultpage']
                     
