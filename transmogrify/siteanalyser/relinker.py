@@ -17,7 +17,7 @@ from collective.transmogrifier.utils import Expression
 import logging
 from external.normalize import urlnormalizer as normalizer
 import urlparse
-logger = logging.getLogger('Plone')
+logger = logging.getLogger('relinker')
 from sys import stderr
 #from plone.i18n.normalizer import urlnormalizer as normalizer
 
@@ -146,9 +146,9 @@ def relinkHTML(item, changes, bad={}):
             return swapfragment(relative_url(newbase, linkedurl), fragment)[0]
         else:
             #if path.count('commercial-part-codes.doc'):
-            if link not in bad:
-                msg = "relinker: no match for %s in %s" % (link,path)
-                logger.log(logging.DEBUG, msg)
+            if link not in bad and link.startswith(item['_site_url']):
+                msg = "no match for %s in %s" % (link,path)
+                logger.debug(msg)
                 #print >> stderr, msg
             return swapfragment(relative_url(newbase, link), fragment)[0]
     
@@ -156,8 +156,10 @@ def relinkHTML(item, changes, bad={}):
     try:
         tree.rewrite_links(replace, base_href=oldbase)
     except:
-        import pdb; pdb.set_trace()
+        raise
+        #import pdb; pdb.set_trace()
     item['text'] = etree.tostring(tree,pretty_print=True,encoding=unicode,method='html')
+
  #   except Exception:
  #       msg = "ERROR: relinker parse error %s, %s" % (path,str(Exception))
  #       logger.log(logging.ERROR, msg, exc_info=True)
