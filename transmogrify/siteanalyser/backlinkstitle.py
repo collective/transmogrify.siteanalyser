@@ -41,10 +41,14 @@ class BacklinksTitle(object):
         items = []
         defaultpages  = {}
         for item in self.treeserializer:
-            path = item.get('_path')
+            path = item.get('_path', None)
             backlinks = item.get('_backlinks')
             title = item.get('title')
             defaultpage = item.get('_defaultpage')
+            if path is None:
+                items.append(item)
+                continue
+                
             if not self.condition(item):
                 items.append( item )
                 self.logger.debug("skipping %s (condition)" % (path))
