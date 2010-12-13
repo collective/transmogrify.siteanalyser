@@ -5,7 +5,6 @@ from collective.transmogrifier.interfaces import ISectionBlueprint
 from collective.transmogrifier.interfaces import ISection
 from collective.transmogrifier.utils import Condition, Expression
 import logging
-logger = logging.getLogger('Plone')
 
 
 
@@ -18,6 +17,7 @@ class MakeAttachments(object):
         self.fields=Expression(options.get('fields','python:False'), transmogrifier, name, options)
         self.condition=Condition(options.get('condition','python:True'), transmogrifier, name, options)
         self.defaultpage = options.get('defaultpage','index-html')
+        self.logger = logging.getLogger(name)
 
     def __iter__(self):
 
@@ -40,6 +40,10 @@ class MakeAttachments(object):
             if not base or not origin:
                 yield item
                 continue
+            if not self.condition(item):
+                    self.logger.debug("skipping %s (condition)" %(item['_path']))
+                    yield item
+                    continue
             links = subitems.get(base+origin,[])
             backlinks =  item.get('_backlinks',[])
             if not links and len(backlinks)==1 and subitems.get(backlinks[0][0]) is not None:
@@ -54,14 +58,10 @@ class MakeAttachments(object):
                 if subitems.get(subbase+suborigin,[]):
                     # subitem isn;t a deadend and will be dealt with elsewhere. 
                     continue
-                if not self.condition(item,i=i,subitem=subitem):
-                    yield subitem
-                    continue
                 change = self.fields(item, subitem=subitem, i=i)
                 if change:
                     item.update(dict(change))
-                    msg = "imakeattachments: %s to %s{%s}" %(suborigin,origin,dict(change).keys())
-                    logger.log(logging.DEBUG, msg)
+                    self.logger.debug("%s to %s{%s}" %(suborigin,origin,dict(change).keys()))
                     # now pass a move request to relinker
                     file,text=change[0]
                     attach.append(dict(_origin=suborigin,
