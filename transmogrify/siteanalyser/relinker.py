@@ -17,7 +17,6 @@ from collective.transmogrifier.utils import Expression
 import logging
 from external.normalize import urlnormalizer as normalizer
 import urlparse
-logger = logging.getLogger('relinker')
 from sys import stderr
 #from plone.i18n.normalizer import urlnormalizer as normalizer
 
@@ -32,6 +31,8 @@ class Relinker(object):
         self.previous = previous
         self.locale = getattr(options, 'locale', 'en')
         self.link_expr = None
+        self.name = name
+        self.logger = logging.getLogger(name)
         if options.get('link_expr', None):
             self.link_expr = Expression(
                     options['link_expr'],
@@ -57,7 +58,7 @@ class Relinker(object):
         bad = {}
         for item in self.previous:
             path = item.get('_path',None)
-            if not path:
+            if path is None:
                 url = item.get('_bad_url')
                 if url:
                     bad[url] = item
@@ -87,6 +88,8 @@ class Relinker(object):
                 item['_path'] = self.link_expr(item)
             #normalize link
             link = urllib.unquote_plus(base+origin)
+            if item['_path'] != path:
+                self.logger.info("Normalised path to '%s' from '%s'" % (item['_path'], path))
             #assert not changes.get(link,None), str((item,changes.get(base+origin,None)))
                 
             changes[link] = item
@@ -104,7 +107,7 @@ class Relinker(object):
                     del item['_defaultpage']
                     
             if 'text' in item and item.get('_mimetype') in ['text/xhtml', 'text/html']:
-                relinkHTML(item, changes, bad)
+                self.relinkHTML(item, changes, bad)
             del item['_origin']
             #rewrite the backlinks too
             backlinks = item.get('_backlinks',[])
@@ -122,44 +125,41 @@ class Relinker(object):
     
             yield item
 
-def relinkHTML(item, changes, bad={}):        
-    path = item['_path']
-    oldbase = item['_site_url']+item['_origin']
-    newbase = item['_site_url']+path
-    def swapfragment(link, newfragment):
-        t = urlparse.urlparse(link)
-        fragment = t[-1]
-        t = t[:-1] + (newfragment,)
-        link = urlparse.urlunparse(t)
-        return link, fragment
+    def relinkHTML(self, item, changes, bad={}):        
+        path = item['_path']
+        oldbase = item['_site_url']+item['_origin']
+        newbase = item['_site_url']+path
+        def swapfragment(link, newfragment):
+            t = urlparse.urlparse(link)
+            fragment = t[-1]
+            t = t[:-1] + (newfragment,)
+            link = urlparse.urlunparse(t)
+            return link, fragment
+        
+        def replace(link):
+            link, fragment = swapfragment(link, '')
     
-    def replace(link):
-        link, fragment = swapfragment(link, '')
-
-        linked = changes.get(link)
-        if not linked:
-            link = urllib.unquote_plus(link)
             linked = changes.get(link)
-            
-        if linked:
-            linkedurl = item['_site_url']+linked['_path']
-            return swapfragment(relative_url(newbase, linkedurl), fragment)[0]
-        else:
-            #if path.count('commercial-part-codes.doc'):
-            if link not in bad and link.startswith(item['_site_url']):
-                msg = "no match for %s in %s" % (link,path)
-                logger.debug(msg)
-                #print >> stderr, msg
-            return swapfragment(relative_url(newbase, link), fragment)[0]
+            if not linked:
+                link = urllib.unquote_plus(link)
+                linked = changes.get(link)
+                
+            if linked:
+                linkedurl = item['_site_url']+linked['_path']
+                return swapfragment(relative_url(newbase, linkedurl), fragment)[0]
+            else:
+                if link not in bad and link.startswith(item['_site_url']):
+                    self.logger.warning("no match for %s in %s" % (link,path))
+                return swapfragment(relative_url(newbase, link), fragment)[0]
+        
+        tree = lxml.html.fragment_fromstring(item['text'], create_parent=True)
+        try:
+            tree.rewrite_links(replace, base_href=oldbase)
+        except:
+            raise
+            #import pdb; pdb.set_trace()
+        item['text'] = etree.tostring(tree,pretty_print=True,encoding=unicode,method='html')
     
-    tree = lxml.html.fragment_fromstring(item['text'], create_parent=True)
-    try:
-        tree.rewrite_links(replace, base_href=oldbase)
-    except:
-        raise
-        #import pdb; pdb.set_trace()
-    item['text'] = etree.tostring(tree,pretty_print=True,encoding=unicode,method='html')
-
- #   except Exception:
- #       msg = "ERROR: relinker parse error %s, %s" % (path,str(Exception))
- #       logger.log(logging.ERROR, msg, exc_info=True)
+     #   except Exception:
+     #       msg = "ERROR: relinker parse error %s, %s" % (path,str(Exception))
+     #       logger.log(logging.ERROR, msg, exc_info=True)

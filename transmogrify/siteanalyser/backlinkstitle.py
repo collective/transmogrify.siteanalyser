@@ -9,7 +9,6 @@ from urllib import unquote
 import urlparse
 import re
 import logging
-logger = logging.getLogger('Plone')
 from transmogrify.pathsorter.treeserializer import TreeSerializer
 
 """
@@ -35,6 +34,8 @@ class BacklinksTitle(object):
         self.treeserializer = TreeSerializer(transmogrifier, name, options, previous)
         self.condition = Condition(options.get('condition', 'python:True'),
                                    transmogrifier, name, options)
+        self.logger = logging.getLogger(name)
+
 
     def __iter__(self):
         items = []
@@ -46,9 +47,11 @@ class BacklinksTitle(object):
             defaultpage = item.get('_defaultpage')
             if not self.condition(item):
                 items.append( item )
+                self.logger.debug("skipping %s (condition)" % (path))
                 continue  
             elif title:
                 items.append( item )
+                self.logger.debug("using existing title=%s %s" % (title, path))
                 continue
             elif defaultpage:
                 # save and we'll use that for title
@@ -69,8 +72,7 @@ class BacklinksTitle(object):
             votes.sort()
             if votes:
                 c,item['title'] = votes[-1]
-                msg = "backlinkstitle %s (%s)" % (path,item['title'])
-                logger.log(logging.DEBUG, msg)
+                self.logger.info("title=%s for %s (from backlinks)" % (item['title'],path))
             else:
                 self.titlefromid(item)
             # go back and title the folder if this is a default page
@@ -103,5 +105,4 @@ class BacklinksTitle(object):
         title = unquote(title)
         title = title.split('.')[0]
         item['title'] = title
-        msg = "backlinkstitle %s (%s)" % (path,item['title'])
-        logger.log(logging.DEBUG, msg)
+        self.logger.info("title=%s for %s (from id)" % (item['title'],path))

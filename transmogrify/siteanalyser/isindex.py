@@ -15,7 +15,6 @@ from collective.transmogrifier.utils import Expression, Condition
 from transmogrify.pathsorter.treeserializer import TreeSerializer
 
 import logging
-logger = logging.getLogger('transmogrify.siteanalyser.isindex')
 
 
 class IsIndex(object):
@@ -34,6 +33,7 @@ class IsIndex(object):
                                                  previous)
         self.condition = Condition(options.get('condition', 'python:True'),
                                    transmogrifier, name, options)
+        self.logger = logging.getLogger(name)
         
             
     def __iter__(self):
@@ -65,7 +65,11 @@ class IsIndex(object):
         items = {}
         for item in self.treeserializer:
             path = item.get('_path', None)
-            if path is None or not self.condition(item):
+            if path is None:
+                yield item
+                continue
+            if not self.condition(item):
+                self.logger.debug("skip %s (condition)"% path)
                 yield item
                 continue
             
@@ -84,7 +88,7 @@ class IsIndex(object):
                 parent = items[parent_path]
                 
                 if parent.get('_defaultpage'):
-                    logger.log(logging.DEBUG, u"skip moving %s to %s because "
+                    self.logger.debug( u"skip moving %s to %s because "
                                               "container already has "
                                               "_defaultpage assigned to %s" % (
                                path, parent_path, parent.get('_defaultpage')))
@@ -108,7 +112,7 @@ class IsIndex(object):
                     del items[path]
                     yield item
             else:
-                logger.log(logging.DEBUG, u"can't move %s to %s because "
+                self.logger.debug( u"can't move %s to %s because "
                                           "container not found" % (
                                           path, parent_path))
         
@@ -123,7 +127,11 @@ class IsIndex(object):
         ulinks = {}
         for item in self.previous:
             path, html = self.ishtml(item)
-            if not path or not self.condition(item):
+            if not path:
+                yield item
+                continue            
+            elif not self.condition(item):
+                self.logger.debug("skip %s (condition)"% path)
                 yield item
                 continue            
             tree = lxml.html.fragment_fromstring(html, create_parent=True)
