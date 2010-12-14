@@ -56,6 +56,9 @@ class Relinker(object):
 
         changes = {}
         bad = {}
+        
+        self.missing = set([])
+        
         for item in self.previous:
             path = item.get('_path',None)
             if path is None:
@@ -89,7 +92,7 @@ class Relinker(object):
             #normalize link
             link = urllib.unquote_plus(base+origin)
             if item['_path'] != path:
-                self.logger.info("Normalised path to '%s' from '%s'" % (item['_path'], path))
+                self.logger.debug("Normalised path to '%s' from '%s'" % (item['_path'], path))
             #assert not changes.get(link,None), str((item,changes.get(base+origin,None)))
                 
             changes[link] = item
@@ -124,6 +127,9 @@ class Relinker(object):
                 item['_backlinks'] = newbacklinks
     
             yield item
+        if self.missing:
+            self.logger.warning("%d broken internal links. Content maybe missing. Debug to see details." % len(self.missing) )
+
 
     def relinkHTML(self, item, changes, bad={}):        
         path = item['_path']
@@ -149,7 +155,8 @@ class Relinker(object):
                 return swapfragment(relative_url(newbase, linkedurl), fragment)[0]
             else:
                 if link not in bad and link.startswith(item['_site_url']):
-                    self.logger.warning("no match for %s in %s" % (link,path))
+                    self.logger.debug("no match for %s in %s" % (link,path))
+                    self.missing.add(link)
                 return swapfragment(relative_url(newbase, link), fragment)[0]
         
         tree = lxml.html.fragment_fromstring(item['text'], create_parent=True)
