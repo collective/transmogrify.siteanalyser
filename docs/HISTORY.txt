@@ -1,6 +1,12 @@
 Changelog
 =========
 
+1.0b6 (2010-12-15)
+------------------
+
+- remove nulls from links which cause lxml errors
+- summarise info in log to single entry
+
 1.0b5 (2010-12-13)
 ------------------
 

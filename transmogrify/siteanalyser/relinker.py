@@ -152,12 +152,16 @@ class Relinker(object):
                 
             if linked:
                 linkedurl = item['_site_url']+linked['_path']
-                return swapfragment(relative_url(newbase, linkedurl), fragment)[0]
+                newlink = swapfragment(relative_url(newbase, linkedurl), fragment)[0]
             else:
                 if link not in bad and link.startswith(item['_site_url']):
-                    self.logger.debug("no match for %s in %s" % (link,path))
+                    self.logger.debug("%s broken link '%s'" % (path, link))
                     self.missing.add(link)
-                return swapfragment(relative_url(newbase, link), fragment)[0]
+                newlink = swapfragment(relative_url(newbase, link), fragment)[0]
+            # need to strip out null chars as lxml spits the dummy
+            newlink = ''.join([c for c in newlink if ord(c) > 32])
+            #self.logger.debug("'%s' -> '%s'" %(link,newlink))
+            return newlink
         
         tree = lxml.html.fragment_fromstring(item['text'], create_parent=True)
         try:
