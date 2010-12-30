@@ -45,12 +45,11 @@ class GuessHideFromNav(object):
         for item in self.previous:
             path = item.get('_path', None)
             if path is None:
-                items.append(item)
+                yield item
                 continue
                 
             if self.condition(item):
                 item[self.exclude_key] = True
                 items.append( item )
                 self.logger.debug("%s: hide in nav due to condition" % (path))
-                yield item
-                continue  
+            yield item
