@@ -20,4 +20,7 @@
    <utility component=".backlinkstitle.BacklinksTitle"
              name="transmogrify.siteanalyser.title" />
 
+   <utility component=".guesshidefromnav.GuessHideFromNav"
+             name="transmogrify.siteanalyser.hidefromnav" />
+
 </configure>
