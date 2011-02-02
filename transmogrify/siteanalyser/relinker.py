@@ -68,7 +68,8 @@ class Relinker(object):
                 yield item
                 continue
             base = item.get('_site_url','')
-            
+
+            #TODO: split normalization into seperate blueprint
             def norm(part):
                 #TODO - don't normalize to existing names
                 if part.startswith('_'):
@@ -147,8 +148,7 @@ class Relinker(object):
     
             linked = changes.get(link)
             if not linked:
-                link = urllib.unquote_plus(link)
-                linked = changes.get(link)
+                linked = changes.get(urllib.unquote_plus(link))
                 
             if linked:
                 linkedurl = item['_site_url']+linked['_path']
@@ -159,14 +159,15 @@ class Relinker(object):
                     self.missing.add(link)
                 newlink = swapfragment(relative_url(newbase, link), fragment)[0]
             # need to strip out null chars as lxml spits the dummy
-            newlink = str(''.join([c for c in newlink if ord(c) > 32]))
-            #self.logger.debug("'%s' -> '%s'" %(link,newlink))
+            newlink = ''.join([c for c in newlink if ord(c) > 32])
+            self.logger.debug("'%s' -> '%s'" %(link,newlink))
             return newlink
-        
-        tree = lxml.html.fragment_fromstring(item['text'], create_parent=True)
+        text = item['text']
+        tree = lxml.html.fragment_fromstring(text, create_parent=True)
         try:
             tree.rewrite_links(replace, base_href=oldbase)
         except:
+            self.logger.error("Error rewriting links in %s"%item['_origin'])
             raise
             #import pdb; pdb.set_trace()
         item['text'] = etree.tostring(tree,pretty_print=True,encoding=unicode,method='html')
