@@ -159,7 +159,7 @@ class Relinker(object):
                     self.missing.add(link)
                 newlink = swapfragment(relative_url(newbase, link), fragment)[0]
             # need to strip out null chars as lxml spits the dummy
-            newlink = ''.join([c for c in newlink if ord(c) > 32])
+            newlink = str(''.join([c for c in newlink if ord(c) > 32]))
             #self.logger.debug("'%s' -> '%s'" %(link,newlink))
             return newlink
         
