@@ -163,6 +163,9 @@ class Relinker(object):
             self.logger.debug("'%s' -> '%s'" %(link,newlink))
             return newlink
         text = item['text']
+        if text is None:
+            self.logger.error("%s Text==None" %(path))
+            return
         tree = lxml.html.fragment_fromstring(text, create_parent=True)
         try:
             tree.rewrite_links(replace, base_href=oldbase)
