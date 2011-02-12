@@ -133,8 +133,12 @@ class IsIndex(object):
             elif not self.condition(item):
                 self.logger.debug("skip %s (condition)"% path)
                 yield item
-                continue            
-            tree = lxml.html.fragment_fromstring(html, create_parent=True)
+                continue
+            try:
+                tree = lxml.html.fromstring(html)
+            except:
+                tree = lxml.html.fragment_fromstring(html, create_parent=True)
+
             base = item.get('_site_url', '')
             tree.make_links_absolute(base+path)
             if '_origin' in item:
