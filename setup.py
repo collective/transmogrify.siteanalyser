@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 import os
 
-version = '1.0b9'
+version = '1.0'
 
 setup(name='transmogrify.siteanalyser',
       version=version,
