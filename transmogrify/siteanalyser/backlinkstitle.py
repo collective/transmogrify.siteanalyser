@@ -35,9 +35,11 @@ class BacklinksTitle(object):
         self.condition = Condition(options.get('condition', 'python:True'),
                                    transmogrifier, name, options)
         self.logger = logging.getLogger(name)
+        self.options = options
 
 
     def __iter__(self):
+        self.logger.info("condition=%s" % (self.options.get('condition', 'python:True')))
         items = []
         defaultpages  = {}
         for item in self.treeserializer:
@@ -75,8 +77,12 @@ class BacklinksTitle(object):
             votes = [(c,name) for name,c in votes.items()]
             votes.sort()
             if votes:
-                c,item['title'] = votes[-1]
-                self.logger.info("title=%s for %s (from backlinks)" % (item['title'],path))
+                c,title = votes[-1]
+                if title.strip():
+                    item['title']=title
+                    self.logger.info('title="%s" for %s (from backlinks)' % (item['title'],path))
+                else:
+                    self.titlefromid(item)
             else:
                 self.titlefromid(item)
             # go back and title the folder if this is a default page
@@ -109,4 +115,4 @@ class BacklinksTitle(object):
         title = unquote(title)
         title = title.split('.')[0]
         item['title'] = title
-        self.logger.info("title=%s for %s (from id)" % (item['title'],path))
+        self.logger.info('title="%s" for %s (from id)' % (item['title'],path))

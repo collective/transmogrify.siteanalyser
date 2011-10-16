@@ -14,6 +14,9 @@
    <utility component=".relinker.Relinker"
              name="transmogrify.siteanalyser.relinker" />
 
+    <utility component=".urltidy.UrlTidy"
+              name="transmogrify.siteanalyser.urltidy" />
+
    <utility component=".makeattachments.MakeAttachments"
              name="transmogrify.siteanalyser.attach" />
 

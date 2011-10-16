@@ -20,7 +20,6 @@ import urlparse
 from sys import stderr
 #from plone.i18n.normalizer import urlnormalizer as normalizer
 
-INVALID_IDS = ['security']
 
 
 class Relinker(object):
@@ -29,21 +28,9 @@ class Relinker(object):
     
     def __init__(self, transmogrifier, name, options, previous):
         self.previous = previous
-        self.locale = getattr(options, 'locale', 'en')
-        self.link_expr = None
         self.name = name
         self.logger = logging.getLogger(name)
-        if options.get('link_expr', None):
-            self.link_expr = Expression(
-                    options['link_expr'],
-                    transmogrifier, name, options)
-        #util = queryUtility(IURLNormalizer)
-        #if util:
-        #    self.normalize = util.normalize
-        #else:
-        self.locale = Expression(options.get('locale', 'python:None'), 
-                                transmogrifier, name, options)
-        
+
     
     
     def __iter__(self):
@@ -69,33 +56,11 @@ class Relinker(object):
                 continue
             base = item.get('_site_url','')
 
-            #TODO: split normalization into seperate blueprint
-            def norm(part):
-                #TODO - don't normalize to existing names
-                if part.startswith('_'):
-                    part = part[1:]+'-1'
-                # Get the information we require for normalization
-                keywords = dict(text=urllib.unquote_plus(part), locale=self.locale(item))
-                # Perform Normalization
-                part = normalizer.normalize(**keywords)
-                if part in INVALID_IDS:
-                    return part+'-1'
-                else:
-                    return part 
-            newpath = '/'.join([norm(part) for part in path.split('/')])
             origin = item.get('_origin')
             if not origin:
                 origin = item['_origin'] = path
-            item['_path'] = newpath
-            # apply link_expr
-            if self.link_expr:
-                item['_path'] = self.link_expr(item)
-            #normalize link
             link = urllib.unquote_plus(base+origin)
-            if item['_path'] != path:
-                self.logger.debug("Normalised path to '%s' from '%s'" % (item['_path'], path))
-            #assert not changes.get(link,None), str((item,changes.get(base+origin,None)))
-                
+
             changes[link] = item
 
         for item in changes.values():
