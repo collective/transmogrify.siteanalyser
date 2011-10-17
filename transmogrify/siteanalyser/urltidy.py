@@ -45,7 +45,7 @@ class UrlTidy(object):
             self.link_expr = Expression(
                     options['link_expr'],
                     transmogrifier, name, options)
-        self.use_title = Condition(options.get('condition', 'python:False'),
+        self.use_title = Condition(options.get('use_title', 'python:False'),
                                    transmogrifier, name, options)
         #util = queryUtility(IURLNormalizer)
         #if util:
@@ -62,6 +62,9 @@ class UrlTidy(object):
     def tidy(self):
 
         self.logger.info("condition=%s" % (self.options.get('condition', 'python:True')))
+
+        # keep track of new_path -> _origin to make new ids unique
+        seen = {}
 
     
         for item in self.previous:
@@ -82,18 +85,41 @@ class UrlTidy(object):
             if not origin:
                 origin = item['_origin'] = path
 
-            newpath = path
-            if self.use_title(item) and 'title' in item:
-                #TODO This has problem that for relinking to work we need to change the full url
-                parts = newpath.split('/')
-                newpath = '/'.join(parts[:-1] + [self.norm(parts[-1], item)])
-
-            newpath = '/'.join([self.norm(part, item) for part in newpath.split('/')])
-
             # apply link_expr
             if self.link_expr:
                 newpath = self.link_expr(item)
+            else:
+                newpath = path
+
+            if 'title' in item and self.use_title(item):
+                #TODO This has problem that for relinking to work we need to change the full url
+                parts = newpath.split('/')
+                newpath = '/'.join(parts[:-1] + [self.norm(item['title'], item)])
+                id = parts[-1]
+                if "." in id:
+                    if "?" in id:
+                        id,_ = id.split("?",1)
+                    id, ext = id.rsplit(".",1)
+                    newpath = "%s.%s" %(newpath, ext)
+
             #normalize link
+            newpath = '/'.join([self.norm(part, item) for part in newpath.split('/')])
+
+            i = 1
+            upath = newpath
+            while True:
+                if upath not in seen:
+                    break
+                if "." in newpath:
+                    start, ext = newpath.rsplit(".",1)
+                    upath = "%s-%s.%s" % (start,i,ext)
+                else:
+                    upath = "%s-%s" % (newpath,i)
+                i += 1
+            newpath = upath
+            seen[newpath] = path
+
+
             if newpath != path:
                 self.logger.debug("Normalised path to '%s' from '%s'" % (newpath, path))
             item['_path'] = newpath
