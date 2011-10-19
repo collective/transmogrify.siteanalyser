@@ -26,4 +26,7 @@
    <utility component=".guesshidefromnav.GuessHideFromNav"
              name="transmogrify.siteanalyser.hidefromnav" />
 
+    <utility component=".sitemapper.SiteMapper"
+              name="transmogrify.siteanalyser.sitemapper" />
+
 </configure>

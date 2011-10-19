@@ -13,6 +13,10 @@ import logging
 from relinker import Relinker
 from external.normalize import urlnormalizer as normalizer
 import urllib
+from lxml import etree
+from lxml.html import fragment_fromstring
+from StringIO import StringIO
+from urlparse import urljoin
 
 INVALID_IDS = ['security']
 
@@ -32,74 +36,82 @@ class SiteMapper(object):
 
     def __init__(self, transmogrifier, name, options, previous):
         self.previous = previous
-        self.relinker = Relinker(transmogrifier, name, options, self.tidy())
+        self.relinker = Relinker(transmogrifier, "relinker", options, self.ouriter())
         self.condition = Condition(options.get('condition', 'python:True'),
                                    transmogrifier, name, options)
         self.logger = logging.getLogger(name)
         self.options = options
 
-        self.locale = getattr(options, 'locale', 'en')
-        self.link_expr = None
         self.name = name
         self.logger = logging.getLogger(name)
-        if options.get('link_expr', None):
-            self.link_expr = Expression(
-                    options['link_expr'],
-                    transmogrifier, name, options)
-        self.use_title = Condition(options.get('condition', 'python:False'),
-                                   transmogrifier, name, options)
-        #util = queryUtility(IURLNormalizer)
-        #if util:
-        #    self.normalize = util.normalize
-        #else:
-        self.locale = Expression(options.get('locale', 'python:None'),
-                                transmogrifier, name, options)
 
 
     def __iter__(self):
         for item in self.relinker:
             yield item
 
-    def tidy(self):
+    def ouriter(self):
 
         self.logger.info("condition=%s" % (self.options.get('condition', 'python:True')))
         items = []
-
+        newpaths = {}
 
         for item in self.previous:
 
             # find the sitemap
 
             if not self.condition(item):
-                self.logger.debug("skipping %s (condition)" % (path))
+                items.append( item )
+                continue
+            path = item.get('_path')
+            if not path:
                 items.append( item )
                 continue
 
+            self.logger.debug("picked sitemap=%s (condition)" % (path))
             # analyse the site map
-            xml = item.get('text','')
-
-            events = ("start", "end")
-            context = etree.iterparse(StringIO(xml), events=events)
-            for action, elem in context:
-                if action == 'start':
-                    if elem.tag == 'a':
-                        href = elem.tag.href
-                        href = make_relative(href)
-                        parents = href.split('/')
-                    else:
-                        invtree[href]
-                print("%s: %s" % (action, elem.tag))
+            html = item.get('text','')
+            base = item['_site_url']
+            newpaths = self.analyse_sitemap(base, html)
+            items.append( item )
 
         for item in items:
-            path = item['_path']
-            parents = invtree.get(path,None)
-            if parents:
+            path = item.get('_path')
+            if path in newpaths:
                 origin = item.get('_origin')
                 if not origin:
                     item['_origin'] = path
-                path = '/'.join(parents)
-                item['_path'] = path
+                item['_path'] = newpaths[path]
             yield item
 
 
+    def analyse_sitemap(self, base, html):
+        newpaths = {}
+        node = fragment_fromstring(html, create_parent=True)
+        parents = []
+        events = ("start", "end")
+        context = etree.iterwalk(node, events=events)
+        for action, elem in context:
+            if action == 'start':
+                if elem.tag == 'a':
+                    href = elem.attrib.get('href')
+                    if not href:
+                        continue
+                    href = urljoin(base,href,allow_fragments=False)
+                    if not href.startswith(base):
+                        continue
+                    path = href[len(base):]
+                    id = path.split('/')[-1]
+                    parents.append(id)
+                    # copy parents with extra Nones in
+                    newpaths[path] = '/'.join([p for p in parents if p is not None])
+                else:
+                    parents.append(None)
+            elif action == 'end':
+                if elem.tag == 'a':
+                    pass
+                else:
+                    parents.pop()
+        self.logger.debug("analysed sitemap=\n%s"% str(newpaths))
+        return newpaths
 
