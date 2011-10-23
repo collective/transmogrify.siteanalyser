@@ -94,7 +94,8 @@ class UrlTidy(object):
             if 'title' in item and self.use_title(item):
                 #TODO This has problem that for relinking to work we need to change the full url
                 parts = newpath.split('/')
-                newpath = '/'.join(parts[:-1] + [self.norm(item['title'], item)])
+                title = item['title'].strip()
+                newpath = '/'.join(parts[:-1] + [self.norm(title, item)])
                 id = parts[-1]
                 if "." in id:
                     if "?" in id:
