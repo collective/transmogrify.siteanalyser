@@ -42,22 +42,30 @@ class BacklinksTitle(object):
         self.logger.info("condition=%s" % (self.options.get('condition', 'python:True')))
         items = []
         defaultpages  = {}
+        countid = 0
+        countbacklinks = 0
+        counttotal = 0
+        skipped = 0
+        countparent = 0
         for item in self.treeserializer:
             path = item.get('_path', None)
-            backlinks = item.get('_backlinks')
+            backlinks = item.get('_backlinks',[])
             title = item.get('title')
             defaultpage = item.get('_defaultpage')
             if path is None:
                 items.append(item)
                 continue
+
+            counttotal += 1
                 
             if not self.condition(item):
                 items.append( item )
-                self.logger.debug("skipping %s (condition)" % (path))
+                self.logger.debug("%s skipped (condition)" % (path))
+                skipped +=1
                 continue  
             elif title:
                 items.append( item )
-                self.logger.debug("using existing title=%s %s" % (title, path))
+                self.logger.debug('%s existingtitle="%s"' % (path,title))
                 continue
             elif defaultpage:
                 # save and we'll use that for title
@@ -65,26 +73,36 @@ class BacklinksTitle(object):
                 defaultpages[indexpath] = item
                 items.append( item )
                 continue
-            elif not backlinks:
-                self.titlefromid(item)
-                items.append( item )
-                continue
-            names = [name for url, name in backlinks if not self.ignore(name)]
+            names = []
+            for url, name in backlinks:
+                pat = self.ignore(name)
+                if pat is not None:
+                    self.logger.debug('pat="%s" ignoring title="%s"'%(pat,name))
+                else:
+                    names.append(name)
             # do a vote
             votes = {}
             for name in names:
                 votes[name] = votes.get(name,0) + 1
             votes = [(c,name) for name,c in votes.items()]
             votes.sort()
+            title = None
             if votes:
                 c,title = votes[-1]
-                if title.strip():
-                    item['title']=title
-                    self.logger.info('title="%s" for %s (from backlinks)' % (item['title'],path))
-                else:
-                    self.titlefromid(item)
+                title = title.strip()
             else:
-                self.titlefromid(item)
+                if backlinks:
+                    self.logger.debug('%s ignored backlinks' % (path))
+                else:
+                    self.logger.debug('%s no backlinks' % (path))
+
+            if title:
+                item['title']=title
+                self.logger.info('%s bl_title="%s" (from backlinks)' % (path,item['title']))
+                countbacklinks += 1
+            else:
+                if self.titlefromid(item):
+                    countid += 1
             # go back and title the folder if this is a default page
                 
             items.append( item )
@@ -95,24 +113,35 @@ class BacklinksTitle(object):
             if folder:
                 if 'title' in item:
                     folder['title'] = item['title']
+                    countparent += 1
                 if 'description' in item:
                     folder['description'] = item['description']
             items2.append( item )
         for item in items2:
             yield item
+        self.logger.info("titles=%d/%d (id=%d,bl=%d,p=%d)" %
+            (countid+countbacklinks+countparent,
+                counttotal,
+                countid,
+                countbacklinks,
+                countparent)
+        )
 
     def ignore(self, name):
+        if not name.strip():
+            return ''
         for pat in self.toignore:
             if re.search(pat,name):
-                return True
-        return False
+                return pat
+        return None
 
     def titlefromid(self, item):
         path = item.get('_path')
         if not path:
-            return
+            return False
         title = [p for p in path.split('/') if p][-1]
         title = unquote(title)
         title = title.split('.')[0]
         item['title'] = title
-        self.logger.info('title="%s" for %s (from id)' % (item['title'],path))
+        self.logger.debug('%s id_title="%s" (from id)' % (path,item['title']))
+        return True
