@@ -62,6 +62,7 @@ class Relinker(object):
             link = urllib.unquote_plus(base+origin)
 
             changes[link] = item
+            self.logger.debug("relinking %s -> %s"%(origin,path))
 
         for item in changes.values():
             if '_defaultpage' in item:
@@ -125,7 +126,7 @@ class Relinker(object):
                 newlink = swapfragment(relative_url(newbase, link), fragment)[0]
             # need to strip out null chars as lxml spits the dummy
             newlink = ''.join([c for c in newlink if ord(c) > 32])
-            self.logger.debug("'%s' -> '%s'" %(link,newlink))
+#            self.logger.debug("'%s' -> '%s'" %(link,newlink))
             return newlink
         text = item['text']
         if text is None:
