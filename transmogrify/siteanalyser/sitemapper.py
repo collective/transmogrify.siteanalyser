@@ -6,16 +6,11 @@ from zope.interface import implements
 from collective.transmogrifier.interfaces import ISectionBlueprint
 from collective.transmogrifier.interfaces import ISection
 from collective.transmogrifier.utils import Matcher,Condition,Expression
-from urllib import unquote
-import urlparse
-import re
 import logging
 from relinker import Relinker
-from external.normalize import urlnormalizer as normalizer
-import urllib
+from urltidy import UrlTidy
 from lxml import etree
 from lxml.html import fragment_fromstring
-from StringIO import StringIO
 from urlparse import urljoin
 import pprint
 
@@ -37,7 +32,7 @@ class SiteMapper(object):
 
     def __init__(self, transmogrifier, name, options, previous):
         self.previous = previous
-        self.relinker = Relinker(transmogrifier, "relinker", options, self.ouriter())
+        self.relinker = UrlTidy(transmogrifier, name, options, self.ouriter())
         self.field_expr=Expression(options.get('field_expr','python:None'), transmogrifier, name, options)
         self.field = options.get('field','').strip()
         self.logger = logging.getLogger(name)
@@ -56,8 +51,12 @@ class SiteMapper(object):
         self.logger.info("condition=%s" % (self.options.get('condition', 'python:True')))
         items = []
         newpaths = {}
+        moved = 0
+        sitemaps = 0
+        total = 0
 
         for item in self.previous:
+            total += 1
 
             # find the sitemap
 
@@ -73,24 +72,78 @@ class SiteMapper(object):
                 if html:
                     break
             if not html:
+                items.append( item )
                 continue
 
-            self.logger.debug("picked sitemap=%s (condition)" % (path))
             # analyse the site map
             base = item['_site_url']
             base_path = '/'.join(path.split('/')[:-1])
-            newpaths.update( dict( analyse_sitemap(base, base_path, html) ) )
-            self.logger.debug("analysed sitemap=\n%s"% str(newpaths))
+            sitemap = analyse_sitemap(base, base_path, html)
+            if sitemap:
+                sitemaps += 1
+            newpaths = merge_sitemap(dict(sitemap), newpaths)
+            self.logger.debug("sitemap %s=%s"% (path,str(sitemap)))
             items.append( item )
 
         for item in items:
             path = item.get('_path')
             if path in newpaths:
+                moved += 1
                 origin = item.get('_origin')
                 if not origin:
                     item['_origin'] = path
                 item['_path'] = newpaths[path]
+                self.logger.debug("%s -> %s" % (path, newpaths[path]))
+            elif path:
+                self.logger.debug("%s -> NOT FOUND" % (path))
             yield item
+
+        self.logger.info("moved %d/%d from %d sitemaps" % (moved,total,sitemaps))
+
+
+
+
+def merge_sitemap(sitemap, newpaths):
+    # Problem is to merge two trees
+
+    # We find a single common element.
+    common = None
+    for oldpath, newpath in sitemap.items():
+        if newpaths.get(oldpath):
+            common = oldpath
+            break
+
+    if not common:
+        newpaths.update( sitemap)
+        return newpaths
+
+    # we have common element, now merge
+    new1 = newpaths.get(common).split('/')
+    new2 = sitemap.get(common).split('/')
+    if new1 == new2:
+        newpaths.update( sitemap)
+        return newpaths
+
+    # Pick the deepest /TopLevel/Crime and /Crime.
+    # TODO what if conflict? e.g. /TopLevel/Crime and /AnotherLevel/Crime
+    if len(new1) > len(new2):
+        mergein = sitemap
+        mergeto = newpaths
+    else:
+        mergein = newpaths
+        mergeto = sitemap
+    base = mergeto[common].split('/')[:-1]
+    minus = len(mergein[common].split('/'))-1
+    for oldurl, newurl in mergein.items():
+        if newurl.startswith(mergein[common]):
+            mergednew = '/'.join(base + newurl.split('/')[minus:])
+            mergeto[oldurl] = mergednew
+        else:
+            mergeto[oldurl] = newurl
+
+
+    return mergeto
+
 
 
 def analyse_sitemap(base, base_path, html, use_text=True):
@@ -126,6 +179,16 @@ def analyse_sitemap(base, base_path, html, use_text=True):
             elif action == 'end':
                 depth -= 1
         return newpaths
+
+sitemap1 = """
+<ul>
+<li><a href="/asp/blah" class="">Toplevel</a></li>
+<ul>
+    <li><a href="/asp/index.asp?pgid=10652" class="">Crime</a></li>
+    <li><a href="/asp/blah2" class="">Something Else</a></li>
+</ul>
+</ul>
+"""
 
 
 sitemap2 = """
@@ -413,4 +476,9 @@ sitemap2 = """
 """
 
 if __name__ == '__main__':
-    pprint.pprint( analyse_sitemap('/','', sitemap2) )
+    m1 = analyse_sitemap('/','', sitemap1)
+    m2 = analyse_sitemap('/','', sitemap2)
+    newpaths = {}
+    newpaths = merge_sitemap(dict(m1), newpaths)
+    newpaths = merge_sitemap(dict(m2), newpaths)
+    pprint.pprint( newpaths )
