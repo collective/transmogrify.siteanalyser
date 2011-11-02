@@ -5,6 +5,8 @@ from collective.transmogrifier.interfaces import ISectionBlueprint
 from collective.transmogrifier.interfaces import ISection
 from collective.transmogrifier.utils import Condition, Expression
 import logging
+import lxml
+import urlparse
 
 
 
@@ -21,11 +23,30 @@ class MakeAttachments(object):
 
     def __iter__(self):
 
+
+        previtems = []
+        backlinksfor = {}
+        for item in self.previous:
+            backlinksfor.update(self.getBacklinks(item))
+            previtems.append(item)
+        else:
+            for item in self.previous:
+                previtems.append(item)
+
+
         # split items on subitems and other
         items, subitems = [], {}
-        for item in self.previous:
+        for item in previtems:
             backlinks = item.get('_backlinks',[])
-            if len(backlinks) == 1:
+            base = item.get('_site_url','')
+            path = item.get('_path','')
+            origin = item.get('_orig_path','')
+            #if not backlinks:
+            backlinks = backlinksfor.get(base+path,[])
+            if len(backlinks):
+                self.logger.debug("%s backlinks=%s backlinks" %
+                                  (path, str(backlinks)))
+            if len(backlinks) == 1 and origin == path:
                 link,name = backlinks[0]
                 subitems.setdefault(link, [])
                 subitems[link].append(item)
@@ -33,7 +54,7 @@ class MakeAttachments(object):
  
         # apply new fields from subitems to items 
         total = 0
-        merged = 0
+        moved = 0
         for item in items:
             base = item.get('_site_url',None)
             origin = item.get('_origin',item.get('_path',None))
@@ -80,17 +101,49 @@ class MakeAttachments(object):
                         subitem['_origin'] = subitem['_path']
                     file = subitem['_path'].split('/')[-1]
                     subitem['_path'] = '/'.join(folder['_path'].split('/') + [file])
+
                     yield subitem
+                moved =+ 1
                 i = i +1
             if folder:
+                self.logger.debug("%s new folder = %s" %
+                                  (item['_path'],folder['_path']))
                 yield folder
             yield item
             # got to set actual final paths of attachments moves
             for subitem in attach:
                 subitem['_path'] = '/'.join(item['_path'].split('/')+[subitem['_path']])
+                self.logger.debug("%s -> %s" %
+                                  (subitem['_origin'],subitem['_path']))
                 yield subitem
+        self.logger.info("moved %d/%d" % (moved, len(items)))
                 
         
 
+    def getBacklinks(self, item):
+        backlinks = {}
+        text = item.get('text','')+item.get('_nav','')
+        if not text:
+            return backlinks
+        base = item.get('_site_url')
+        url = base + item.get('_path')
         
+        tree = lxml.html.soupparser.fromstring(text)
+        for element, attribute, rawlink, pos in tree.iterlinks():
+            t = urlparse.urlparse(rawlink)
+            fragment = t[-1]
+            t = t[:-1] + ('',)
+            rawlink = urlparse.urlunparse(t)
+            link = urlparse.urljoin(url, rawlink)
+            if link[-1] == '/':
+                link = link[:-1]
+            #override to get link text
+            name = None
+            if attribute == 'href':
+                name = ' '.join(element.text_content().split())
+            elif attribute == 'src':
+                name = element.get('alt','')
+            if name and link != url:
+                backlinks.setdefault(link,[]).extend([(url,name)])
+        return backlinks
 
