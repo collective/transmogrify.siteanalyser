@@ -75,6 +75,8 @@ class BacklinksTitle(object):
                 continue
             names = []
             for url, name in backlinks:
+                if not name.strip():
+                    continue
                 pat = self.ignore(name)
                 if pat is not None:
                     self.logger.debug('pat="%s" ignoring title="%s"'%(pat,name))
@@ -128,8 +130,6 @@ class BacklinksTitle(object):
         )
 
     def ignore(self, name):
-        if not name.strip():
-            return ''
         for pat in self.toignore:
             if re.search(pat,name):
                 return pat
