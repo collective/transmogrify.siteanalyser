@@ -82,7 +82,7 @@ class SiteMapper(object):
             if sitemap:
                 sitemaps += 1
             newpaths = merge_sitemap(dict(sitemap), newpaths)
-            self.logger.debug("sitemap %s=%s"% (path,str(sitemap)))
+            #self.logger.debug("sitemap %s=%s"% (path,str(sitemap)))
             items.append( item )
 
         for item in items:
@@ -93,9 +93,10 @@ class SiteMapper(object):
                 if not origin:
                     item['_origin'] = path
                 item['_path'] = newpaths[path]
-                self.logger.debug("%s -> %s" % (path, newpaths[path]))
+                self.logger.debug("%s <- %s" % (newpaths[path],path))
             elif path:
-                self.logger.debug("%s -> NOT FOUND" % (path))
+                #self.logger.debug("%s -> NOT FOUND" % (path))
+                pass
             yield item
 
         self.logger.info("moved %d/%d from %d sitemaps" % (moved,total,sitemaps))
