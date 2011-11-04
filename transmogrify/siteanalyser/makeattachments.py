@@ -35,6 +35,7 @@ class MakeAttachments(object):
 
 
         # split items on subitems and other
+        paths = {}
         items, subitems = [], {}
         for item in previtems:
             backlinks = item.get('_backlinks',[])
@@ -51,6 +52,9 @@ class MakeAttachments(object):
                 subitems.setdefault(link, [])
                 subitems[link].append(item)
             items.append(item)
+            # Store paths to see if we don't overwrite
+            if path:
+                paths[path] = item
  
         # apply new fields from subitems to items 
         total = 0
@@ -81,6 +85,7 @@ class MakeAttachments(object):
                     continue
                 change = self.fields(item, subitem=subitem, i=i)
                 if change:
+                    # if we transform element
                     item.update(dict(change))
                     self.logger.debug("%s to %s{%s}" %(suborigin,origin,dict(change).keys()))
                     # now pass a move request to relinker
@@ -96,14 +101,33 @@ class MakeAttachments(object):
                                       _defaultpage=self.defaultpage)
                         if not item.get('_origin'):
                             item['_origin']=item['_path']
-                        item['_path'] = '/'.join(item['_path'].split('/') + [self.defaultpage])
+                        newpath = '/'.join(item['_path'].split('/') + [self.defaultpage])
+                        newpathi = newpath
+                        i = 1
+                        while newpathi in paths:
+                            newpathi = "%s-%d" % (newpath,i)
+                            i = i + 1
+                        item['_path'] = newpath
+                        paths[newpath] = item
+                    else:
+                        # need to ensure we don't overwrite whats already there
+                        pass
                     if '_origin' not in subitem:
                         subitem['_origin'] = subitem['_path']
                     file = subitem['_path'].split('/')[-1]
-                    subitem['_path'] = '/'.join(folder['_path'].split('/') + [file])
+                    newpath = '/'.join(folder['_path'].split('/') + [file])
+                    newpathi = newpath
+                    i = 1
+                    while newpathi in paths:
+                        newpathi = "%s-%d" % (newpath,i)
+                        i = i + 1
+                    subitem['_path'] = newpath
+                    paths[newpath] = item
+                    self.logger.debug("%s <- %s" %
+                                      (subitem['_path'],subitem['_origin']))
 
                     yield subitem
-                moved =+ 1
+                moved += 1
                 i = i +1
             if folder:
                 self.logger.debug("%s new folder = %s" %
@@ -113,8 +137,8 @@ class MakeAttachments(object):
             # got to set actual final paths of attachments moves
             for subitem in attach:
                 subitem['_path'] = '/'.join(item['_path'].split('/')+[subitem['_path']])
-                self.logger.debug("%s -> %s" %
-                                  (subitem['_origin'],subitem['_path']))
+                self.logger.debug("%s <- %s" %
+                                  (subitem['_path'],subitem['_origin']))
                 yield subitem
         self.logger.info("moved %d/%d" % (moved, len(items)))
                 
@@ -122,7 +146,7 @@ class MakeAttachments(object):
 
     def getBacklinks(self, item):
         backlinks = {}
-        text = item.get('text','')+item.get('_nav','')
+        text = item.get('text','')
         if not text:
             return backlinks
         base = item.get('_site_url')
