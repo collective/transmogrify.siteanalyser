@@ -62,7 +62,7 @@ class Relinker(object):
             link = urllib.unquote_plus(base+origin)
 
             changes[link] = item
-            self.logger.debug("relinking %s -> %s"%(origin,path))
+            self.logger.debug("%s <- %s (relinked)"%(path,origin))
 
         for item in changes.values():
             if '_defaultpage' in item:

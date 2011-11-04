@@ -66,12 +66,19 @@ class UrlTidy(object):
         # keep track of new_path -> _origin to make new ids unique
         seen = {}
 
+        titles = 0
+        total = 0
+        normed = 0
+        skipped = 0
+
     
         for item in self.previous:
+            total += 1
 
             if not self.condition(item):
                 self.logger.debug("skipping %s (condition)" % (path))
                 yield item
+                skipped += 1
                 continue
 
             path = item.get('_path',None)
@@ -102,6 +109,7 @@ class UrlTidy(object):
                         id,_ = id.split("?",1)
                     id, ext = id.rsplit(".",1)
                     newpath = "%s.%s" %(newpath, ext)
+                titles += 1
 
             #normalize link
             newpath = '/'.join([self.norm(part, item) for part in newpath.split('/')])
@@ -122,11 +130,14 @@ class UrlTidy(object):
 
 
             if newpath != path:
+                normed += 1
                 self.logger.debug("Normalised path to '%s' from '%s'" % (newpath, path))
             item['_path'] = newpath
             #assert not changes.get(link,None), str((item,changes.get(base+origin,None)))
 
             yield item
+
+        self.logger.info('titles=%d, normed=%d, total=%d'%(titles,normed,total))
 
 
 
