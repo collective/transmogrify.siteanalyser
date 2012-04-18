@@ -1,6 +1,17 @@
 Changelog
 =========
 
+1.1 (2012-04-18)
+----------------
+
+- added transmogrify.siteanalyser.sitemapper [djay]
+- split transmogrify.siteanalyser.urltidy out of relinker [djay]
+- ensure urltidy always create unique urls [djay]
+- Added ability to take id from title to urltidy [djay]
+- improved logging [djay]
+- fixed bug in attach where two items can end up with same path [djay]
+
+
 1.0 (2011-06-29)
 ----------------
 

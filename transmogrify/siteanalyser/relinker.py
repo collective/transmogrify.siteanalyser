@@ -35,10 +35,7 @@ class Relinker(object):
     
     def __iter__(self):
         
-        #TODO: needs to take input as to what new name should be so other blueprints can decide
-        #TODO: needs allow complete changes to path so can move structure
-        #TODO: needs to change file extentions of converted docs. or allow others to change that
-        #TODO need to fix relative links 
+        #TODO need to fix relative links
         
 
         changes = {}
