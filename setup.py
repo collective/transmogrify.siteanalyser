@@ -6,7 +6,7 @@ version = '1.1'
 setup(name='transmogrify.siteanalyser',
       version=version,
       description="transmogrifier source blueprints for crawling html",
-      long_description=open('README.txt').read() +'\n'+
+      long_description=open('README.rst').read() +'\n'+
                        open(os.path.join("transmogrify", "siteanalyser", "isindex.txt")).read() + "\n" +
                        open(os.path.join("transmogrify", "siteanalyser", "relinker.txt")).read() + "\n" +
                        open(os.path.join("transmogrify", "siteanalyser", "makeattachments.txt")).read() + "\n" +
