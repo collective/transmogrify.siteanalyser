@@ -18,25 +18,25 @@ If you'd like to move content around before it's uploaded you can use the urltid
  $> bin/funnelweb --urltidy:link_expr=python:item['_path'].startswith('/news') and '/otn/news'+item['path'][5:] or item['_path']
 
 
-Options
--------
+Options:
 
-condition
+:condition:
   TAL Expression to apply transform
 
-locale
+:locale:
   TAL Expression to return the locale used for id normalisation. e.g. 'string:en'
 
-link_expr
+:link_expr:
   TAL Expression to alter the items '_path'
 
-use_title
+:use_title:
   Condition TAL Expression to change the end path element to a normalised version of item['_title']
 
 
 
 transmogrify.siteanalyser.attach
 ================================
+
 Find items and move them if they are tightly linked to a single page. For example if an image
 is located in an images folder, but is only referenced from a single img element on a page in
 /page then the image will be 'merged' with the page.
@@ -54,17 +54,16 @@ name for the default page of the newly created folder ::
   attachmentguess-defaultpage = index-html
 
 Options
--------
 
-fields
+:fields:
   TAL Expression to return the a dictionary of changes to ``item``. It will use ``item``, ``subitem`` and ``i`` variables.
   e.g. python:{'attachment':subitem['text']}. This will be called for all subitems. The subitems will be deleted.
 
-condition
+:condition:
   TAL Expression to apply transform
   (default='python:True')
 
-defaultpage
+:defaultpage:
   (default='index-html')
 
 
@@ -80,13 +79,12 @@ You can specify an option 'ignore' option to specify titles never to use
 If it can't guess it from the backlinks it will default to using the file name after
 cleaning it up somewhat
 
-Options
--------
+Options:
 
-condition
+:condition:
   TAL Expression to apply transform
 
-ignore
+:ignore:
   New line seperated list of strings which won't be use as titles. Defaults to 'next','previous'
 
 
@@ -95,16 +93,15 @@ transmogrify.siteanalyser.sitemapper
 Rearrange content based on snippets of html arranged as a navigation tree or sitemap.
 A navigation tree is a set of href links arranged in nested html.
 
-Options
--------
+Options:
 
-field
+:field:
   Name of a field from item which contains a sitemap
 
-field_expr
+:field_expr:
   Expression to determine the field which contains a sitemap
 
-condition
+:condition:
   Don't move this item
 
 transmogrify.siteanalyser.hidefromnav
@@ -120,19 +117,18 @@ anything else should be hidden. #TODO
 3. The condition to set to tree for the item to hide
 
 Options
--------
 
-key
+:key:
   Default is '_exclude-from-navigation'.
 
-condition
+:condition:
   Default is 'python:False'
 
-template_key
+:template_key:
   #TODO
   Default is '_template'
 
-hide_img_folders
+:hide_img_folders:
   #TODO
   Default is 'True'
 
@@ -143,24 +139,23 @@ To determine if an item is a default page for a container (it has many links
 to items in that container, even if not contained in that folder), and then move
 it to that folder.
 
-Options
--------
+Options:
 
-mode
+:mode:
   'links' or 'path' (default=links).
   'links' mode uses links
   to determine if a item is a defaultpage of a subtree by looking at it's links.
   'path' mode uses parent_path expression to
   determine if an item is a defaultpage of that parent.
 
-min_links
+:min_links:
   If a page has as at least this number of links that point to content in a folder
   then move it there and make it the defaultpage. (default=2)
 
-max_uplinks
+:max_uplinks:
   If a page has more than max_uplinks it won't be moved. (default=2)
 
-parent_path
+:parent_path:
         Rule is defined by entered
         parent_path option which is expression with access to item,
         transmogrifier, name, options and modules variables.
@@ -170,7 +165,7 @@ parent_path
         the first item in pipeline will take precedence in case parent_path rule
         returns more than one item for the same parent.
 
-condition
+:condition:
   default=python:True
 
 
