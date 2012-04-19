@@ -29,4 +29,7 @@
     <utility component=".sitemapper.SiteMapper"
               name="transmogrify.siteanalyser.sitemapper" />
 
+    <utility component=".treeserializer.TreeSerializer"
+             name="transmogrify.pathsorter" />
+
 </configure>

@@ -183,3 +183,28 @@ called '_origin' and put the old path into that. Once you pass it through
 the relinker all href, img tags etc will be changed in any html content where they
 pointed to content that has since moved. All '_origin' fields will be removed
 after relinking.
+
+transmogrify.pathsorter
+==================================
+
+If items are at the same level in a folder then they will be sorted based on a
+'_sortorder' key as given by transmogrify.webcrawler.
+
+In addition
+
+
+- if a container has a 'text' key then a default page will be created.
+
+- if item's name is in 'default_pages' and it's parent doesn't already have a defaultpage
+  then the item will be set as the parents default page.
+
+Options:
+
+:default_pages:
+  Set item as to be set as the default page of it's parent if it matches one of these names.
+  Default is 'index.html'
+
+:default_containers:
+  if an item doesn't exist for a given items parent it will be created. The _type key will
+  be set to the first item in 'default_containers'. Default is 'Folder'.
+
