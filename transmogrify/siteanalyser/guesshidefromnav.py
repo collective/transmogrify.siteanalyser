@@ -1,15 +1,10 @@
 
-import fnmatch
 from zope.interface import classProvides
 from zope.interface import implements
 from collective.transmogrifier.interfaces import ISectionBlueprint
 from collective.transmogrifier.interfaces import ISection
 from collective.transmogrifier.utils import Matcher,Condition
-from urllib import unquote
-import urlparse
-import re
 import logging
-from transmogrify.pathsorter.treeserializer import TreeSerializer
 
 """
 Guess Hide From Nav

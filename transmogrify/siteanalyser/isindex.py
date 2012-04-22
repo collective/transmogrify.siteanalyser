@@ -12,7 +12,7 @@ from collective.transmogrifier.interfaces import ISectionBlueprint
 from collective.transmogrifier.interfaces import ISection
 from collective.transmogrifier.utils import Matcher
 from collective.transmogrifier.utils import Expression, Condition
-from transmogrify.pathsorter.treeserializer import TreeSerializer
+from treeserializer import TreeSerializer
 
 import logging
 

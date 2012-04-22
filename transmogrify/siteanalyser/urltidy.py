@@ -75,17 +75,17 @@ class UrlTidy(object):
         for item in self.previous:
             total += 1
 
+            path = item.get('_path',None)
+            if path is None:
+                url = item.get('_bad_url')
+                yield item
+                continue
             if not self.condition(item):
                 self.logger.debug("skipping %s (condition)" % (path))
                 yield item
                 skipped += 1
                 continue
 
-            path = item.get('_path',None)
-            if path is None:
-                url = item.get('_bad_url')
-                yield item
-                continue
             base = item.get('_site_url','')
 
             origin = item.get('_origin')

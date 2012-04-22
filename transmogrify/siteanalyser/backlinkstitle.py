@@ -9,7 +9,7 @@ from urllib import unquote
 import urlparse
 import re
 import logging
-from transmogrify.pathsorter.treeserializer import TreeSerializer
+from treeserializer import TreeSerializer
 
 """
 Backlinks Title
