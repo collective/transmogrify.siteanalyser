@@ -1,6 +1,11 @@
 Changelog
 =========
 
+1.2 (2012-04-28)
+----------------
+
+- moved transmogrify.pathsorter into transmogrify.siteanalyser.pathsorter [djay]
+
 1.1 (2012-04-18)
 ----------------
 

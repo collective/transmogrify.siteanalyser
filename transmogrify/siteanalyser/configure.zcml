@@ -30,6 +30,6 @@
               name="transmogrify.siteanalyser.sitemapper" />
 
     <utility component=".treeserializer.TreeSerializer"
-             name="transmogrify.pathsorter" />
+             name="transmogrify.siteanalyser.pathsorter" />
 
 </configure>
