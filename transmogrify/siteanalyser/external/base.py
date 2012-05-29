@@ -57,6 +57,8 @@ def baseNormalize(text):
         return repr(text)
 
     text = text.strip()
+    if not isinstance(text, unicode):
+        text = text.decode('utf-8')
 
     res = u''
     for ch in text:

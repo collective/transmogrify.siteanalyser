@@ -1,6 +1,12 @@
 Changelog
 =========
 
+1.2.1dev (Unreleased)
+---------------------
+
+- converted text to unicode baseNormalize because decomposition needs unicode valute to works properly [gborelli]
+
+
 1.2 (2012-04-28)
 ----------------
 
