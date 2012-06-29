@@ -5,7 +5,7 @@ Changelog
 ---------------------
 
 - converted text to unicode baseNormalize because decomposition needs unicode valute to works properly [gborelli]
-
+- add ignore_re attribute in Backlinks title for ignore regular expression condition [ivanteoh]
 
 1.2 (2012-04-28)
 ----------------

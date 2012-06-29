@@ -31,6 +31,7 @@ class BacklinksTitle(object):
     def __init__(self, transmogrifier, name, options, previous):
         self.previous = previous
         self.toignore=options.get('ignore','next\nprevios\n').strip().split('\n')
+        self.toignore_re=options.get('ignore_re','').strip().split('\n')
         self.treeserializer = TreeSerializer(transmogrifier, name, options, previous)
         self.condition = Condition(options.get('condition', 'python:True'),
                                    transmogrifier, name, options)
@@ -39,7 +40,8 @@ class BacklinksTitle(object):
 
 
     def __iter__(self):
-        self.logger.info("condition=%s" % (self.options.get('condition', 'python:True')))
+        self.logger.debug("condition=%s" % (self.options.get('condition', 'python:True')))
+        self.logger.debug("ignore=%s" % (self.toignore))
         items = []
         defaultpages  = {}
         countid = 0
@@ -132,6 +134,9 @@ class BacklinksTitle(object):
     def ignore(self, name):
         for pat in self.toignore:
             if re.search(pat,name):
+                return pat
+        for pat in self.toignore_re:
+            if re.match(pat,name):
                 return pat
         return None
 

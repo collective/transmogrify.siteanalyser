@@ -35,6 +35,7 @@ class SiteMapper(object):
         self.relinker = UrlTidy(transmogrifier, name, options, self.ouriter())
         self.field_expr=Expression(options.get('field_expr','python:None'), transmogrifier, name, options)
         self.field = options.get('field','').strip()
+        self.condition=Condition(options.get('condition','python:True'), transmogrifier, name, options)
         self.logger = logging.getLogger(name)
         self.options = options
 
@@ -48,7 +49,7 @@ class SiteMapper(object):
 
     def ouriter(self):
 
-        self.logger.info("condition=%s" % (self.options.get('condition', 'python:True')))
+        self.logger.debug("condition=%s" % (self.options.get('condition', 'python:True')))
         items = []
         newpaths = {}
         moved = 0
@@ -87,6 +88,10 @@ class SiteMapper(object):
 
         for item in items:
             path = item.get('_path')
+            if not self.condition(item):
+                self.logger.debug("skipping %s (condition)" % path)
+                yield item
+                continue
             if path in newpaths:
                 moved += 1
                 origin = item.get('_origin')
