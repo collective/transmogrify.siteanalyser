@@ -12,7 +12,7 @@ from relinker import Relinker
 from external.normalize import urlnormalizer as normalizer
 import urllib
 
-INVALID_IDS = ['security']
+#INVALID_IDS = ['security', 'sharing']
 
 
 """
@@ -38,6 +38,8 @@ class UrlTidy(object):
         self.options = options
 
         self.locale = getattr(options, 'locale', 'en')
+        self.invalid_ids = options.get('invalid_ids', '').split()
+
         self.link_expr = None
         self.name = name
         self.logger = logging.getLogger(name)
@@ -54,13 +56,11 @@ class UrlTidy(object):
         self.locale = Expression(options.get('locale', 'python:None'),
                                 transmogrifier, name, options)
 
-
     def __iter__(self):
         for item in self.relinker:
             yield item
 
     def tidy(self):
-
         self.logger.info("condition=%s" % (self.options.get('condition', 'python:True')))
 
         # keep track of new_path -> _origin to make new ids unique
@@ -149,7 +149,7 @@ class UrlTidy(object):
         keywords = dict(text=urllib.unquote_plus(part), locale=self.locale(item))
         # Perform Normalization
         part = normalizer.normalize(**keywords)
-        if part in INVALID_IDS:
-            return part+'-1'
+        if part in self.invalid_ids:
+            return part + '-1'
         else:
             return part
