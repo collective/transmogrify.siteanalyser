@@ -30,9 +30,8 @@ class Relinker(object):
         self.previous = previous
         self.name = name
         self.logger = logging.getLogger(name)
+        self.html_keys = options.get('html_keys', 'text').split()
 
-    
-    
     def __iter__(self):
         
         #TODO need to fix relative links
@@ -80,8 +79,9 @@ class Relinker(object):
                     del item['_defaultpage']
                     self.logger.debug("'%s' default page remove" % (item['_path']))
 
-            if 'text' in item and item.get('_mimetype') in ['text/xhtml', 'text/html']:
+            if item.get('_mimetype') in ['text/xhtml', 'text/html']:
                 self.relinkHTML(item, changes, bad)
+
             del item['_origin']
             #rewrite the backlinks too
             backlinks = item.get('_backlinks',[])
@@ -132,21 +132,29 @@ class Relinker(object):
             newlink = ''.join([c for c in newlink if ord(c) > 32])
 #            self.logger.debug("'%s' -> '%s'" %(link,newlink))
             return newlink
-        text = item['text']
-        if text is None:
-            self.logger.error("%s Text==None" %(path))
-            return
-        try:
-            tree = lxml.html.fromstring(text)
-        except:
-            tree = lxml.html.fragment_fromstring(text, create_parent=True)
-        try:
-            tree.rewrite_links(replace, base_href=oldbase)
-        except:
-            self.logger.error("Error rewriting links in %s"%item['_origin'])
-            raise
-            #import pdb; pdb.set_trace()
-        item['text'] = etree.tostring(tree,pretty_print=True,encoding=unicode,method='html')
+
+        for html_key in self.html_keys:
+            if html_key not in item:
+                continue
+
+            text = item[html_key]
+            if text is None:
+                self.logger.error("%s Text==None" % (item['_path']))
+                continue
+
+            self.logger.debug("'%s' relink for %s" % (item['_path'], html_key))
+            try:
+                tree = lxml.html.fromstring(text)
+            except:
+                tree = lxml.html.fragment_fromstring(text, create_parent=True)
+
+            try:
+                tree.rewrite_links(replace, base_href=oldbase)
+            except:
+                self.logger.error("Error rewriting links in %s" % item['_origin'])
+                raise
+                #import pdb; pdb.set_trace()
+            item[html_key] = etree.tostring(tree, pretty_print=True, encoding=unicode, method='html')
     
      #   except Exception:
      #       msg = "ERROR: relinker parse error %s, %s" % (path,str(Exception))
