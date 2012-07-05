@@ -59,20 +59,27 @@ class Relinker(object):
             link = urllib.unquote_plus(base+origin)
 
             changes[link] = item
-            self.logger.debug("%s <- %s (relinked)"%(path,origin))
+            self.logger.debug("%s <- %s (relinked)" % (path, origin))
 
         for item in changes.values():
             if '_defaultpage' in item:
-                index = item['_site_url']+item['_origin']+'/'+item['_defaultpage']
+                index = item['_site_url'] + item['_origin'] + '/' + item['_defaultpage']
                 newindex = changes.get(index)
                 #need to work out if the new index is still in this folder
-                if newindex is not None and newindex['_path'].startswith(item['_path']):
-                    item['_defaultpage'] = newindex['_path'][len(item['_path']):].lstrip('/')
+                if newindex is not None:
+                    # is the parent of our indexpage still 'item'?
+                    indexparentpath = '/'.join(newindex['_path'].split('/')[:-1])
+                    indexparent = changes.get(newindex['_site_url'] + indexparentpath)
+                    if indexparent == item:
+                        newindexid = newindex['_path'].split('/')[-1]
+                        item['_defaultpage'] = newindexid
+                        self.logger.debug("'%s' default page stay" % (item['_path']))
                 else:
                     # why was it set then?? #TODO
                     # index moved elsewhere so defaultpage setting is off
                     del item['_defaultpage']
-                    
+                    self.logger.debug("'%s' default page remove" % (item['_path']))
+
             if 'text' in item and item.get('_mimetype') in ['text/xhtml', 'text/html']:
                 self.relinkHTML(item, changes, bad)
             del item['_origin']

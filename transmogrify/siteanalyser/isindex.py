@@ -29,7 +29,7 @@ class IsIndex(object):
         if self.mode == 'path':
             self.parent_path = Expression(options['parent_path'],
                                           transmogrifier, name, options)
-            self.treeserializer = TreeSerializer(transmogrifier, name, options,
+        self.treeserializer = TreeSerializer(transmogrifier, name, options,
                                                  previous)
         self.condition = Condition(options.get('condition', 'python:True'),
                                    transmogrifier, name, options)
@@ -125,7 +125,8 @@ class IsIndex(object):
         """
         items = {}
         ulinks = {}
-        for item in self.previous:
+        #for item in self.previous:
+        for item in self.treeserializer:
             path, html = self.ishtml(item)
             if not path:
                 yield item
@@ -143,7 +144,7 @@ class IsIndex(object):
             tree.make_links_absolute(base+path)
             if '_origin' in item:
                 self.moved[item['_origin']] = path
-            
+
             # collect all links on a page
             links = []
             items[path] = (item, path, links)
