@@ -14,7 +14,7 @@ from lxml.html import fragment_fromstring
 from urlparse import urljoin
 import pprint
 
-INVALID_IDS = ['security']
+#INVALID_IDS = ['security']
 
 
 """
@@ -32,7 +32,7 @@ class SiteMapper(object):
 
     def __init__(self, transmogrifier, name, options, previous):
         self.previous = previous
-        self.relinker = UrlTidy(transmogrifier, name, options, self.ouriter())
+        self.relinker = Relinker(transmogrifier, name, options, self.ouriter())
         self.field_expr=Expression(options.get('field_expr','python:None'), transmogrifier, name, options)
         self.field = options.get('field','').strip()
         self.condition=Condition(options.get('condition','python:True'), transmogrifier, name, options)
