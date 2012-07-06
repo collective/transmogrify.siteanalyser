@@ -30,7 +30,6 @@ class Relinker(object):
         self.previous = previous
         self.name = name
         self.logger = logging.getLogger(name)
-        self.html_keys = options.get('html_keys', 'text').split()
 
     def __iter__(self):
         
@@ -133,7 +132,12 @@ class Relinker(object):
 #            self.logger.debug("'%s' -> '%s'" %(link,newlink))
             return newlink
 
-        for html_key in self.html_keys:
+        if '_html_keys' not in item:
+            return
+
+        html_keys = item['_html_keys'].split(',')
+
+        for html_key in html_keys:
             if html_key not in item:
                 continue
 
