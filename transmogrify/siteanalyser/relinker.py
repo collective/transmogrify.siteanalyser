@@ -111,7 +111,9 @@ class Relinker(object):
             t = t[:-1] + (newfragment,)
             link = urlparse.urlunparse(t)
             return link, fragment
-        
+
+        counter = 0
+
         def replace(link):
             link, fragment = swapfragment(link, '')
     
@@ -122,6 +124,7 @@ class Relinker(object):
             if linked:
                 linkedurl = item['_site_url']+linked['_path']
                 newlink = swapfragment(relative_url(newbase, linkedurl), fragment)[0]
+                counter += 1
             else:
                 if link not in bad and link.startswith(item['_site_url']):
                     self.logger.debug("%s broken link '%s'" % (path, link))
@@ -132,25 +135,21 @@ class Relinker(object):
 #            self.logger.debug("'%s' -> '%s'" %(link,newlink))
             return newlink
 
-        if '_html_keys' not in item:
-            return
-
-        html_keys = item['_html_keys'].split(',')
-
-        for html_key in html_keys:
-            if html_key not in item:
+        # guess which fields are html by trying to parse them
+        html = {}
+        for key, value in item.items():
+            if value is None:
                 continue
-
-            text = item[html_key]
-            if text is None:
-                self.logger.error("%s Text==None" % (item['_path']))
-                continue
-
-            self.logger.debug("'%s' relink for %s" % (item['_path'], html_key))
             try:
-                tree = lxml.html.fromstring(text)
+                html[key] = lxml.html.fromstring(text)
             except:
-                tree = lxml.html.fragment_fromstring(text, create_parent=True)
+                try:
+                    html[key] = lxml.html.fragment_fromstring(text, create_parent=True)
+                except:
+                    pass
+
+        for field, tree in html.items():
+            old_counter = counter
 
             try:
                 tree.rewrite_links(replace, base_href=oldbase)
@@ -158,8 +157,11 @@ class Relinker(object):
                 self.logger.error("Error rewriting links in %s" % item['_origin'])
                 raise
                 #import pdb; pdb.set_trace()
-            item[html_key] = etree.tostring(tree, pretty_print=True, encoding=unicode, method='html')
-    
+            # only update fields which had links in
+            if counter != old_counter:
+                item[field] = etree.tostring(tree, pretty_print=True, encoding=unicode, method='html')
+        self.logger.debug("'%s' relinked %s links in %s" % (item['_path'], counter, html.keys()))
+
      #   except Exception:
      #       msg = "ERROR: relinker parse error %s, %s" % (path,str(Exception))
      #       logger.log(logging.ERROR, msg, exc_info=True)

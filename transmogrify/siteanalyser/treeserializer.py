@@ -106,7 +106,7 @@ class TreeSerializer(object):
                 parent.get('_type') in self.default_containers:
                     parent['_defaultpage'] = parts[-1]
                     added_index.add(parent['_path'])
-                    self.logger.info("'%s' set defaultpage='%s'" %(parent['_path'],parts[-1]))
+                    self.logger.debug("'%s' set defaultpage='%s'" %(parent['_path'],parts[-1]))
                     
                     # also in case we added the parent ourselves we need to give a sortorder
                     if parent.get('_sortorder', None) is None:

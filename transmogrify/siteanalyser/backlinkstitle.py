@@ -102,7 +102,7 @@ class BacklinksTitle(object):
 
             if title:
                 item['title']=title
-                self.logger.info('%s bl_title="%s" (from backlinks)' % (path,item['title']))
+                self.logger.debug('%s bl_title="%s" (from backlinks)' % (path,item['title']))
                 countbacklinks += 1
             else:
                 if self.titlefromid(item):
@@ -123,7 +123,7 @@ class BacklinksTitle(object):
             items2.append( item )
         for item in items2:
             yield item
-        self.logger.info("titles=%d/%d (id=%d,bl=%d,p=%d)" %
+        self.logger.info("titles=%d/%d (id=%d,backlinks=%d,parent=%d)" %
             (countid+countbacklinks+countparent,
                 counttotal,
                 countid,
