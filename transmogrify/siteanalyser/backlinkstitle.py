@@ -49,33 +49,44 @@ class BacklinksTitle(object):
         counttotal = 0
         skipped = 0
         countparent = 0
+
+        # build up an map of all default pages
         for item in self.treeserializer:
             path = item.get('_path', None)
-            backlinks = item.get('_backlinks',[])
-            title = item.get('title')
+            if not path:
+                yield item
+                continue
             defaultpage = item.get('_defaultpage')
-            if path is None:
-                items.append(item)
-                continue
-
-            counttotal += 1
-                
-            if not self.condition(item):
-                items.append( item )
-                self.logger.debug("%s skipped (condition)" % (path))
-                skipped +=1
-                continue  
-            elif title:
-                items.append( item )
-                self.logger.debug('%s existingtitle="%s"' % (path,title))
-                continue
-            elif defaultpage:
+            if path and defaultpage:
                 # save and we'll use that for title
                 indexpath = urlparse.urljoin(path+'/', defaultpage)
-                defaultpages[indexpath] = item
-                items.append( item )
+            defaultpages[path] = item
+            items.append( item )
+
+        for item in items:
+            path = item.get('_path', None)
+            title = item.get('title')
+            counttotal += 1
+
+            if not self.condition(item):
+                self.logger.debug("%s skipped (condition)" % (path))
+                skipped +=1
+                yield item
+                continue  
+            elif title:
+                self.logger.debug('%s existingtitle="%s"' % (path,title))
+                yield item
                 continue
             names = []
+
+            backlinks = item.get('_backlinks',[])
+            # look at backlinks of us and our default page for titles
+            if '_defaultpage' in item:
+                defaultpage = defaultpages.get('/'.join([path, item.get('_defaultpage')]))
+                backlinks += defaultpage.get('_backlinks', [])
+            else:
+                defaultpage = None
+
             for url, name in backlinks:
                 if not name.strip():
                     continue
@@ -92,7 +103,7 @@ class BacklinksTitle(object):
             votes.sort()
             title = None
             if votes:
-                c,title = votes[-1]
+                c, title = votes[-1]
                 title = title.strip()
             else:
                 if backlinks:
@@ -104,25 +115,17 @@ class BacklinksTitle(object):
                 item['title']=title
                 self.logger.debug('%s bl_title="%s" (from backlinks)' % (path,item['title']))
                 countbacklinks += 1
-            else:
-                if self.titlefromid(item):
-                    countid += 1
+            elif defaultpage and defaultpage.get('title',None) is not None:
+                # set from default pages title
+                item['title'] = defaultpage['title']
+                countparent += 1
+                if 'description' in defaultpage and 'description' not in item:
+                    item['description'] = defaultpage['description']
+            elif self.titlefromid(item):
+                countid += 1
             # go back and title the folder if this is a default page
-                
-            items.append( item )
-        items2 = []
-        for item in items:
-            path = item.get('_path')
-            folder = defaultpages.get(path)
-            if folder:
-                if 'title' in item:
-                    folder['title'] = item['title']
-                    countparent += 1
-                if 'description' in item:
-                    folder['description'] = item['description']
-            items2.append( item )
-        for item in items2:
             yield item
+                
         self.logger.info("titles=%d/%d (id=%d,backlinks=%d,parent=%d)" %
             (countid+countbacklinks+countparent,
                 counttotal,
