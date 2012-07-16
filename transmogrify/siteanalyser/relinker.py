@@ -72,6 +72,8 @@ class Relinker(object):
                         newindexid = newindex['_path'].split('/')[-1]
                         item['_defaultpage'] = newindexid
                         self.logger.debug("'%s' default page stay" % (item['_path']))
+                    else:
+                        import pdb; pdb.set_trace()
                 else:
                     # why was it set then?? #TODO
                     # index moved elsewhere so defaultpage setting is off

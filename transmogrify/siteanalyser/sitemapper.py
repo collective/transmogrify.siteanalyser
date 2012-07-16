@@ -32,9 +32,10 @@ class SiteMapper(object):
 
     def __init__(self, transmogrifier, name, options, previous):
         self.previous = previous
-        self.relinker = Relinker(transmogrifier, '%s:relinker'%name, options, self.ouriter())
+        self.relinker = Relinker(transmogrifier, '%s'%name, options, self.ouriter())
         self.field_expr=Expression(options.get('field_expr','python:None'), transmogrifier, name, options)
         self.field = options.get('field','').strip()
+        self.breadcrumb_field = options.get('breadcrumb_field','').strip()
         self.condition=Condition(options.get('condition','python:True'), transmogrifier, name, options)
         self.logger = logging.getLogger(name)
         self.options = options
@@ -82,6 +83,21 @@ class SiteMapper(object):
             path = defaultpage_parent.get(path,path)
             base_path = '/'.join(path.split('/')[:-1])
 
+            if self.breadcrumb_field and self.breadcrumb_field in item:
+                html = item.get(self.breadcrumb_field, '')
+                # assume all breadcrumbs start from /
+                sitemap = analyse_sitemap(base, '', html, nested=False)
+
+                # replace defaultpages with parents
+                sitemap = [(defaultpage_parent.get(old_path, old_path), new_path)
+                           for old_path, new_path in sitemap]
+  
+                #self.logger.debug(pprint.pprint(sitemap))
+                if sitemap:
+                    sitemaps += 1
+                newpaths = merge_sitemap(dict(sitemap), newpaths)
+
+
             html = None
             fields = self.field_expr(item)
             if type(fields) != type([]):
@@ -92,6 +108,7 @@ class SiteMapper(object):
                 html = item.get(field, '')
                 if not html:
                     continue
+                import pdb; pdb.set_trace()
                 sitemap = analyse_sitemap(base, base_path, html)
 
                 # replace defaultpages with parents
@@ -237,7 +254,7 @@ def merge_sitemap(sitemap, newpaths):
 
 
 
-def analyse_sitemap(base, base_path, html, use_text=True):
+def analyse_sitemap(base, base_path, html, use_text=True, nested=True):
         newpaths = []
         node = fragment_fromstring(html, create_parent=True)
         parents = []
@@ -258,18 +275,27 @@ def analyse_sitemap(base, base_path, html, use_text=True):
                     path = url[len(base):]
                     if use_text and elem.text:
                         id = ' '.join(elem.text.split()).strip()
+                        id = id.replace('/','_')
                     else:
                         id = path.split('/')[-1]
 
-                    parents = [(d,p) for d,p in parents if d<depth]
+                    # skip the Home
+                    if url == base:
+                        continue
+
+                    if nested:
+                        parents = [(d,p) for d,p in parents if d<depth]
                     parents = parents + [(depth,id)]
                     relpath = '/'.join([p for d,p in parents])
-                    newpaths.append( (path, base_path +'/'+relpath) )
+                    if base_path:
+                        relpath = '/'.join([base_path,relpath])
+                    newpaths.append( (path, relpath) )
                     #newpaths.append( (path, relpath) )
                     lastdepth = depth
                 depth += 1
             elif action == 'end':
-                depth -= 1
+                if nested:
+                    depth -= 1
         return newpaths
 
 sitemap1 = """

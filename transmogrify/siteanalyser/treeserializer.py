@@ -52,7 +52,7 @@ class TreeSerializer(object):
             basepath = ''
             parentpath = ''
             parent = items.get(item['_site_url'])
-            self.logger.debug("'%s' analysing item" %(item['_path']))
+            #self.logger.debug("'%s' analysing item" %(item['_path']))
             for part in parts:
                 basepath += part
 
@@ -70,9 +70,9 @@ class TreeSerializer(object):
                         items[item['_site_url']+newpath] = parent
                         parentpath = '/'.join([p for p in parentpath if p])
                         newparent = dict(
-                                            _path     = parentpath,
-                                            _site_url = item['_site_url'],
-                                            _defaultpage = newname)
+                                        _path     = parentpath,
+                                        _site_url = item['_site_url'],
+                                        _defaultpage = newname)
                         if basepath != '':
                             newparent['_type'] = self.default_containers[0]
                         else:
@@ -99,7 +99,8 @@ class TreeSerializer(object):
             # look at _origin_path to see if it was originally an index
             #import pdb; pdb.set_trace()
             isDefaultName = parts[-1] in self.default_pages
-
+            if isDefaultName:
+                self.logger.debug(parts)
 
             if parts and parent and parent.get('_defaultpage') is None and \
                 isDefaultName and \
