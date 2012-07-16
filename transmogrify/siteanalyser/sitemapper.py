@@ -77,6 +77,8 @@ class SiteMapper(object):
 
         for item in items:
             path = item.get('_path')
+            if 'links/index.php' in path:
+                import pdb; pdb.set_trace()
 
             # analyse the site map
             base = item['_site_url']
@@ -108,7 +110,6 @@ class SiteMapper(object):
                 html = item.get(field, '')
                 if not html:
                     continue
-                import pdb; pdb.set_trace()
                 sitemap = analyse_sitemap(base, base_path, html)
 
                 # replace defaultpages with parents
@@ -260,40 +261,58 @@ def analyse_sitemap(base, base_path, html, use_text=True, nested=True):
         parents = []
         depth = 0
         lastdepth = 0
+        found_paths = {}
         events = ("start", "end")
         context = etree.iterwalk(node, events=events)
+
+        #Current state
+        id = None
+
         for action, elem in context:
             if action == 'start':
-                id = None
                 if elem.tag == 'a':
-                    href = elem.attrib.get('href')
-                    if not href:
-                        continue
-                    url = urljoin(base,href,allow_fragments=False)
-                    if not url.startswith(base):
-                        continue
-                    path = url[len(base):]
-                    if use_text and elem.text:
-                        id = ' '.join(elem.text.split()).strip()
-                        id = id.replace('/','_')
-                    else:
-                        id = path.split('/')[-1]
+                    id = ''
+                # we are collecting text for our id
+                if id is not None and use_text and elem.text:
+                    id = ' '.join([id]+elem.text.split()).strip()
+                    id = id.replace('/','_')
 
-                    # skip the Home
-                    if url == base:
-                        continue
-
-                    if nested:
-                        parents = [(d,p) for d,p in parents if d<depth]
-                    parents = parents + [(depth,id)]
-                    relpath = '/'.join([p for d,p in parents])
-                    if base_path:
-                        relpath = '/'.join([base_path,relpath])
-                    newpaths.append( (path, relpath) )
-                    #newpaths.append( (path, relpath) )
-                    lastdepth = depth
                 depth += 1
             elif action == 'end':
+                # collect text inside the a
+                if elem.tag == 'a':
+
+                    href = elem.attrib.get('href')
+                    url = ''
+                    if href is not None:
+                        url = urljoin(base,href,allow_fragments=False)
+                    path = url[len(base):]
+
+                    if not url.startswith(base):
+                        #it's an external link
+                        pass
+                    elif url == base:
+                        # it's home, lets skip
+                        pass
+                    elif path in found_paths:
+                        # duplicate entry, skip it
+                        # we assume the first one is the better name
+                        pass
+                    else:
+                        found_paths[path] = True
+                        if not id:
+                            id = path.split('/')[-1]
+
+                        if nested:
+                            parents = [(d,p) for d,p in parents if d<depth]
+                        parents = parents + [(depth,id)]
+                        relpath = '/'.join([p for d,p in parents])
+                        #if base_path:
+                        #    relpath = '/'.join([base_path,relpath])
+                        newpaths.append( (path, relpath) )
+                        #newpaths.append( (path, relpath) )
+                        lastdepth = depth
+
                 if nested:
                     depth -= 1
         return newpaths
