@@ -53,10 +53,11 @@ class SiteMapper(object):
 
         self.logger.debug("condition=%s" % (self.options.get('condition', 'python:True')))
         items = []
-        newpaths = {}
         moved = 0
         sitemaps = 0
         total = 0
+        # list of site maps which don't merge togeather
+        unmerged = []
 
         defaultpage_parent = {}
 
@@ -83,12 +84,12 @@ class SiteMapper(object):
             # analyse the site map
             base = item['_site_url']
             path = defaultpage_parent.get(path,path)
-            base_path = '/'.join(path.split('/')[:-1])
+            #base_path = '/'.join(path.split('/')[:-1])
 
             if self.breadcrumb_field and self.breadcrumb_field in item:
                 html = item.get(self.breadcrumb_field, '')
                 # assume all breadcrumbs start from /
-                sitemap = analyse_sitemap(base, '', html, nested=False)
+                sitemap = analyse_sitemap(base, path, html, nested=False)
 
                 # replace defaultpages with parents
                 sitemap = [(defaultpage_parent.get(old_path, old_path), new_path)
@@ -97,7 +98,7 @@ class SiteMapper(object):
                 #self.logger.debug(pprint.pprint(sitemap))
                 if sitemap:
                     sitemaps += 1
-                newpaths = merge_sitemap(dict(sitemap), newpaths)
+                unmerged = list(merge_sitemap(dict(sitemap), unmerged))
 
 
             html = None
@@ -110,7 +111,7 @@ class SiteMapper(object):
                 html = item.get(field, '')
                 if not html:
                     continue
-                sitemap = analyse_sitemap(base, base_path, html)
+                sitemap = analyse_sitemap(base, path, html)
 
                 # replace defaultpages with parents
                 sitemap = [(defaultpage_parent.get(old_path, old_path), new_path)
@@ -119,15 +120,22 @@ class SiteMapper(object):
                 #self.logger.debug(pprint.pprint(sitemap))
                 if sitemap:
                     sitemaps += 1
-                newpaths = merge_sitemap(dict(sitemap), newpaths)
+                unmerged = list(merge_sitemap(dict(sitemap), unmerged))
                 #self.logger.debug("sitemap %s=%s"% (path,str(sitemap)))
                 #self.logger.debug(pprint.pprint(newpaths))
 
 
-        self.logger.debug("==Merged Sitemap==")
-        for newp, oldp in sorted([(v,k) for k,v in newpaths.items()]):
-            self.logger.debug("%s (%s)"%(newp,oldp))
-        self.logger.debug("==================")
+        for newpaths in unmerged:
+            self.logger.debug("==Merged Sitemap==")
+            for newp, oldp in sorted([(v,k) for k,v in newpaths.items()]):
+                self.logger.debug("%s (%s)"%(newp,oldp))
+            self.logger.debug("==================")
+
+
+        # join remaining sitemaps togeather
+        newpaths = {}
+        for sitemap in unmerged:
+            newpaths.update(sitemap)
 
         #Get the parent folder path
         #import pdb; pdb.set_trace()
@@ -197,61 +205,71 @@ class SiteMapper(object):
 
         self.logger.info("moved %d/%d from %d sitemaps" % (moved,total,sitemaps))
 
-def merge_sitemap(sitemap, newpaths):
-    # Problem is to merge two trees
+def merge_sitemap(sitemap, unmerged):
 
-    # We find a single common element.
-    common = None
-    for oldpath, newpath in sitemap.items():
-        if newpaths.get(oldpath):
-            common = oldpath
-            break
 
-    if not common:
-        newpaths.update(sitemap)
-        return newpaths
+    for newpaths in unmerged:
 
-    # we have common element, now merge
-    new1 = newpaths.get(common).split('/')
-    new2 = sitemap.get(common).split('/')
+        # We find a single common element.
+        common_paths = []
+        for oldpath, newpath in sitemap.items():
+            if newpaths.get(oldpath):
+                common_paths.append(oldpath)
 
-#    print("**common: %s" % common)
-#    print("**newpaths: %s" % (newpaths.get(common)))
-#    print("**sitemap: %s" % (sitemap.get(common)))
-
-    if new1 == new2:
-        newpaths.update(sitemap)
-        return newpaths
-
-    if newpaths[common][0] == '/':
-        del sitemap[common]
-        newpaths.update(sitemap)
-        return newpaths
-
-    if sitemap[common][0] == '/':
-        del newpaths[common]
-        newpaths.update(sitemap)
-        return newpaths
-
-    # Pick the deepest /TopLevel/Crime and /Crime.
-    # TODO what if conflict? e.g. /TopLevel/Crime and /AnotherLevel/Crime
-    if len(new1) > len(new2):
-        mergein = sitemap
-        mergeto = newpaths
-    else:
-        mergein = newpaths
-        mergeto = sitemap
-    base = mergeto[common].split('/')[:-1]
-    minus = len(mergein[common].split('/'))-1
-    for oldurl, newurl in mergein.items():
-        if newurl.startswith(mergein[common]):
-            mergednew = '/'.join(base + newurl.split('/')[minus:])
-            mergeto[oldurl] = mergednew
+        #import pdb; pdb.set_trace()
+        if not common_paths:
+            yield newpaths
         else:
-            mergeto[oldurl] = newurl
+            #TODO should merge on all common
+            common = common_paths[0]
+            # we will form a single sitemap and then continue merging
 
+            # we have common element, now merge
+            new1 = newpaths.get(common).split('/')
+            new2 = sitemap.get(common).split('/')
 
-    return mergeto
+        #    print("**common: %s" % common)
+        #    print("**newpaths: %s" % (newpaths.get(common)))
+        #    print("**sitemap: %s" % (sitemap.get(common)))
+
+            # we don't need to adjust to do the merge since both at the same level
+            if new1 == new2:
+                sitemap.update(newpaths)
+                continue
+
+    #        if newpaths[common][0] == '/':
+    #            del sitemap[common]
+    #            newpaths.update(sitemap)
+    #            return newpaths
+    #
+    #        if sitemap[common][0] == '/':
+    #            del newpaths[common]
+    #            newpaths.update(sitemap)
+    #            return newpaths
+
+            # Pick the deepest /TopLevel/Crime and /Crime.
+            # TODO what if conflict? e.g. /TopLevel/Crime and /AnotherLevel/Crime
+            if len(new1) > len(new2):
+                mergein = sitemap
+                mergeto = newpaths
+            else:
+                mergein = newpaths
+                mergeto = sitemap
+            base = mergeto[common].split('/')[:-1]
+            minus = len(mergein[common].split('/'))-1
+            notmatched = {}
+            for oldurl, newurl in mergein.items():
+                if newurl.startswith(mergein[common]):
+                    mergednew = '/'.join(base + newurl.split('/')[minus:])
+                    mergeto[oldurl] = mergednew
+                else:
+                    notmatched[oldurl] = newurl
+            if notmatched:
+                yield notmatched
+            sitemap = mergeto
+
+    # last sitemap remaining
+    yield sitemap
 
 
 
@@ -262,23 +280,23 @@ def analyse_sitemap(base, base_path, html, use_text=True, nested=True):
         depth = 0
         lastdepth = 0
         found_paths = {}
-        events = ("start", "end")
-        context = etree.iterwalk(node, events=events)
+        context = etree.iterwalk(node, events=("start", "end"))
 
         #Current state
-        id = None
+        text = ''
 
         for action, elem in context:
             if action == 'start':
                 if elem.tag == 'a':
-                    id = ''
-                # we are collecting text for our id
-                if id is not None and use_text and elem.text:
-                    id = ' '.join([id]+elem.text.split()).strip()
-                    id = id.replace('/','_')
+                    text = ''
 
                 depth += 1
             elif action == 'end':
+                # we are collecting text for our id
+                if use_text and elem.text:
+                    text = ' '.join([text]+elem.text.split()).strip()
+                    text = text.replace('/','_')
+
                 # collect text inside the a
                 if elem.tag == 'a':
 
@@ -300,8 +318,10 @@ def analyse_sitemap(base, base_path, html, use_text=True, nested=True):
                         pass
                     else:
                         found_paths[path] = True
-                        if not id:
+                        if not text:
                             id = path.split('/')[-1]
+                        else:
+                            id = text
 
                         if nested:
                             parents = [(d,p) for d,p in parents if d<depth]
@@ -312,9 +332,15 @@ def analyse_sitemap(base, base_path, html, use_text=True, nested=True):
                         newpaths.append( (path, relpath) )
                         #newpaths.append( (path, relpath) )
                         lastdepth = depth
+                    text = ''
 
                 if nested:
                     depth -= 1
+
+        # special case: use unlinked text at end of breadcrumb for cur path
+        if not nested and text:
+            lastold, lastnew = newpaths[-1]
+            newpaths.append( (base_path, '/'.join([lastnew,text]) ))
         return newpaths
 
 sitemap1 = """
