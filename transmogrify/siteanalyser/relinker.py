@@ -38,6 +38,7 @@ class Relinker(object):
 
         changes = {}
         bad = {}
+        items = {}
         
         self.missing = set([])
         
@@ -56,7 +57,9 @@ class Relinker(object):
                 origin = item['_origin'] = path
             link = urllib.unquote_plus(base+origin)
 
+
             changes[link] = item
+            items[path] = item
             self.logger.debug("%s <- %s (relinked)" % (path, origin))
 
         for item in changes.values():
@@ -67,13 +70,17 @@ class Relinker(object):
                 if newindex is not None:
                     # is the parent of our indexpage still 'item'?
                     indexparentpath = '/'.join(newindex['_path'].split('/')[:-1])
-                    indexparent = changes.get(newindex['_site_url'] + indexparentpath)
+                    indexparent = items.get(indexparentpath)
                     if indexparent == item:
                         newindexid = newindex['_path'].split('/')[-1]
                         item['_defaultpage'] = newindexid
                         self.logger.debug("'%s' default page stay" % (item['_path']))
                     else:
                         import pdb; pdb.set_trace()
+                        self.logger.warning("'%s' default page '%s' was moved out of this folder (%s)"%
+                                            (item['_path'],item['_defaultpage'], newindex['_path']))
+                        del item['_defaultpage']
+                    #    import pdb; pdb.set_trace()
                 else:
                     # why was it set then?? #TODO
                     # index moved elsewhere so defaultpage setting is off
