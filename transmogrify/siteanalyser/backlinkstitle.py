@@ -49,6 +49,7 @@ class BacklinksTitle(object):
         counttotal = 0
         skipped = 0
         countparent = 0
+        namecount = {}
 
         # build up an map of all default pages
         for item in self.treeserializer:
@@ -62,6 +63,14 @@ class BacklinksTitle(object):
                 indexpath = urlparse.urljoin(path+'/', defaultpage)
             defaultpages[path] = item
             items.append( item )
+
+            # Find link names which are too common
+            backlinks = item.get('_backlinks',[])
+            for url, name in backlinks:
+                if not name.strip():
+                    continue
+                namecount.setdefault(name,set([])).add(path)
+
 
         for item in items:
             path = item.get('_path', None)
@@ -93,6 +102,8 @@ class BacklinksTitle(object):
                 pat = self.ignore(name)
                 if pat is not None:
                     self.logger.debug('pat="%s" ignoring title="%s"'%(pat,name))
+                elif len(namecount[name]) > 1:
+                    self.logger.debug('%s ignoring title="%s" (to common)'%(path,name))
                 else:
                     names.append(name)
             # do a vote
