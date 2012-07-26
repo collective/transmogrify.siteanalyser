@@ -32,6 +32,7 @@ class TreeSerializer(object):
                     path = path[1:]
                 items[base+path] = item
 
+
         added_folders = set({})
         added_index = set()
         # build tree
@@ -99,20 +100,17 @@ class TreeSerializer(object):
             # look at _origin_path to see if it was originally an index
             #import pdb; pdb.set_trace()
             isDefaultName = parts[-1] in self.default_pages
-            if isDefaultName:
-                self.logger.debug(parts)
+            isDefaultFolder = parent.get('_type') in self.default_containers or parent.get('_path') == ''
 
-            if parts and parent and parent.get('_defaultpage') is None and \
-                isDefaultName and \
-                parent.get('_type') in self.default_containers:
-                    parent['_defaultpage'] = parts[-1]
-                    added_index.add(parent['_path'])
-                    self.logger.debug("'%s' set defaultpage='%s'" %(parent['_path'],parts[-1]))
-                    
-                    # also in case we added the parent ourselves we need to give a sortorder
-                    if parent.get('_sortorder', None) is None:
-                        parent['_sortorder'] = item.get('_sortorder', None)
-            
+            if parts and parent and parent.get('_defaultpage') is None and isDefaultName and isDefaultFolder:
+                parent['_defaultpage'] = parts[-1]
+                added_index.add(parent['_path'])
+                self.logger.debug("'%s' set defaultpage='%s'" %(parent['_path'],parts[-1]))
+
+                # also in case we added the parent ourselves we need to give a sortorder
+                if parent.get('_sortorder', None) is None:
+                    parent['_sortorder'] = item.get('_sortorder', None)
+
 
         self.logger.info("%d folders added. %d defaultpages set, %d items sorted" %
                          (len(added_folders), len(added_index), len(items)))
