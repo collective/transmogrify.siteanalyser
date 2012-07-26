@@ -21,6 +21,9 @@ from sys import stderr
 #from plone.i18n.normalizer import urlnormalizer as normalizer
 
 
+class Counter:
+    counter = 0
+
 
 class Relinker(object):
     classProvides(ISectionBlueprint)
@@ -63,8 +66,13 @@ class Relinker(object):
             self.logger.debug("%s <- %s (relinked)" % (path, origin))
 
         for item in changes.values():
+            counter = Counter()
+
             if '_defaultpage' in item:
-                index = item['_site_url'] + item['_origin'] + '/' + item['_defaultpage']
+                if item['_origin']:
+                    index = item['_site_url'] + item['_origin'] + '/' + item['_defaultpage']
+                else:
+                    index = item['_site_url'] + item['_defaultpage']
                 newindex = changes.get(index)
                 #need to work out if the new index is still in this folder
                 if newindex is not None:
@@ -76,19 +84,26 @@ class Relinker(object):
                         item['_defaultpage'] = newindexid
                         self.logger.debug("'%s' default page stay" % (item['_path']))
                     else:
-                        import pdb; pdb.set_trace()
+                        #import pdb; pdb.set_trace()
                         self.logger.warning("'%s' default page '%s' was moved out of this folder (%s)"%
                                             (item['_path'],item['_defaultpage'], newindex['_path']))
                         del item['_defaultpage']
+                        # leave in defaultpage and hope redirection takes care of it
                     #    import pdb; pdb.set_trace()
                 else:
                     # why was it set then?? #TODO
                     # index moved elsewhere so defaultpage setting is off
+                    import pdb; pdb.set_trace()
                     del item['_defaultpage']
-                    self.logger.debug("'%s' default page remove" % (item['_path']))
+                    self.logger.warning("'%s' default page remove" % (item['_path']))
+            if 'remoteUrl' in item:
+                link = item['_site_url']+urljoin(item['_origin'],item['remoteUrl'])
+                # have to put ./ in front of Link
+                item['remoteUrl'] = "./"+replace(link, item, changes, counter, self.missing, bad)
+
 
             if item.get('_mimetype') in ['text/xhtml', 'text/html']:
-                self.relinkHTML(item, changes, bad)
+                self.relinkHTML(item, changes, counter, bad)
 
             del item['_origin']
             #rewrite the backlinks too
@@ -110,67 +125,71 @@ class Relinker(object):
             self.logger.warning("%d broken internal links. Content maybe missing. Debug to see details." % len(self.missing) )
 
 
-    def relinkHTML(self, item, changes, bad={}):        
-        path = item['_path']
+    def relinkHTML(self, item, changes, counter, bad={}):
         oldbase = item['_site_url']+item['_origin']
-        newbase = item['_site_url']+path
-        def swapfragment(link, newfragment):
-            t = urlparse.urlparse(link)
-            fragment = t[-1]
-            t = t[:-1] + (newfragment,)
-            link = urlparse.urlunparse(t)
-            return link, fragment
-
-        counter = 0
-
-        def replace(link):
-            link, fragment = swapfragment(link, '')
-    
-            linked = changes.get(link)
-            if not linked:
-                linked = changes.get(urllib.unquote_plus(link))
-                
-            if linked:
-                linkedurl = item['_site_url']+linked['_path']
-                newlink = swapfragment(relative_url(newbase, linkedurl), fragment)[0]
-                counter += 1
-            else:
-                if link not in bad and link.startswith(item['_site_url']):
-                    self.logger.debug("%s broken link '%s'" % (path, link))
-                    self.missing.add(link)
-                newlink = swapfragment(relative_url(newbase, link), fragment)[0]
-            # need to strip out null chars as lxml spits the dummy
-            newlink = ''.join([c for c in newlink if ord(c) > 32])
-#            self.logger.debug("'%s' -> '%s'" %(link,newlink))
-            return newlink
-
         # guess which fields are html by trying to parse them
         html = {}
         for key, value in item.items():
-            if value is None:
+            if value is None or getattr(value, 'find', None) is None:
+                continue
+            elif '<' not in value:
                 continue
             try:
-                html[key] = lxml.html.fromstring(text)
-            except:
+                html[key] = lxml.html.fromstring(value)
+            except lxml.etree.ParseError:
                 try:
-                    html[key] = lxml.html.fragment_fromstring(text, create_parent=True)
-                except:
+                    html[key] = lxml.html.fragment_fromstring(value, create_parent=True)
+                except lxml.etree.ParseError:
                     pass
 
+        missing = set([])
+        item_replace = lambda link: replace(link, item, changes, counter, missing, bad)
+        self.missing = self.missing.union(missing)
         for field, tree in html.items():
-            old_counter = counter
+            old_count = counter.counter
 
             try:
-                tree.rewrite_links(replace, base_href=oldbase)
+                tree.rewrite_links(item_replace, base_href=oldbase)
             except:
                 self.logger.error("Error rewriting links in %s" % item['_origin'])
                 raise
-                #import pdb; pdb.set_trace()
             # only update fields which had links in
-            if counter != old_counter:
+            if counter.counter != old_count:
                 item[field] = etree.tostring(tree, pretty_print=True, encoding=unicode, method='html')
-        self.logger.debug("'%s' relinked %s links in %s" % (item['_path'], counter, html.keys()))
+        for link in missing:
+            self.logger.warning("%s broken link '%s'" % (item['_path'], link))
+        self.logger.debug("'%s' relinked %s links in %s" % (item['_path'], counter.counter, html.keys()))
 
      #   except Exception:
      #       msg = "ERROR: relinker parse error %s, %s" % (path,str(Exception))
      #       logger.log(logging.ERROR, msg, exc_info=True)
+
+def swapfragment(link, newfragment):
+    t = urlparse.urlparse(link)
+    fragment = t[-1]
+    t = t[:-1] + (newfragment,)
+    link = urlparse.urlunparse(t)
+    return link, fragment
+
+def replace(link, item, changes, counter, missing, bad):
+    path = item['_path']
+    newbase = item['_site_url']+path
+
+    link, fragment = swapfragment(link, '')
+
+    linked = changes.get(link)
+    if not linked:
+        linked = changes.get(urllib.unquote_plus(link))
+
+    if linked:
+        linkedurl = item['_site_url']+linked['_path']
+        newlink = swapfragment(relative_url(newbase, linkedurl), fragment)[0]
+        counter.counter += 1
+    else:
+        if link not in bad and link.startswith(item['_site_url']):
+            missing.add(link)
+        newlink = swapfragment(relative_url(newbase, link), fragment)[0]
+    # need to strip out null chars as lxml spits the dummy
+    newlink = ''.join([c for c in newlink if ord(c) > 32])
+#            self.logger.debug("'%s' -> '%s'" %(link,newlink))
+    return newlink
