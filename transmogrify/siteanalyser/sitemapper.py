@@ -39,14 +39,16 @@ class SiteMapper(object):
         self.condition=Condition(options.get('condition','python:True'), transmogrifier, name, options)
         self.logger = logging.getLogger(name)
         self.options = options
-        self.default_pages = options.get('default_pages', 'index.html').split()
+        # if set will ensure all sitemap items are of this type, using defaultpage if needed
+        self.folder_type = options.get('folder-type','Folder').strip()
 
         self.name = name
         self.logger = logging.getLogger(name)
 
 
     def __iter__(self):
-        for item in self.relinker:
+ #       for item in self.relinker:
+        for item in self.ouriter():
             yield item
 
     def ouriter(self):
@@ -60,6 +62,8 @@ class SiteMapper(object):
         unmerged = []
 
         defaultpage_parent = {}
+        items_by_path = {}
+
 
         # first find the default pages
         for item in self.previous:
@@ -73,32 +77,31 @@ class SiteMapper(object):
 
             if item.get('_defaultpage'):
                 defaultpage_parent[item['_path']+'/'+item.get('_defaultpage')] = path
+            items_by_path[item['_path']] = item
 
             items.append(item)
 
         for item in items:
             path = item.get('_path')
-            if 'links/index.php' in path:
-                import pdb; pdb.set_trace()
-
             # analyse the site map
             base = item['_site_url']
             path = defaultpage_parent.get(path,path)
             #base_path = '/'.join(path.split('/')[:-1])
+            #if 'programs-activities/news/newsletter' in path:
+            #    import pdb; pdb.set_trace()
 
             if self.breadcrumb_field and self.breadcrumb_field in item:
                 html = item.get(self.breadcrumb_field, '')
                 # assume all breadcrumbs start from /
-                sitemap = analyse_sitemap(base, path, html, nested=False)
+                sitemap = self.analyse_sitemap(base, path, html,  defaultpage_parent, nested=False)
 
-                # replace defaultpages with parents
-                sitemap = [(defaultpage_parent.get(old_path, old_path), new_path)
-                           for old_path, new_path in sitemap]
-  
+                ## breadcrumbs can contain conflicting sitemaps. Assume we crawl it all so just need the last
+                #sitemap = sitemap[-1:]
+
                 #self.logger.debug(pprint.pprint(sitemap))
                 if sitemap:
                     sitemaps += 1
-                unmerged = list(merge_sitemap(dict(sitemap), unmerged))
+                unmerged = list(self.merge_sitemap(dict(sitemap), unmerged))
 
 
             html = None
@@ -111,70 +114,85 @@ class SiteMapper(object):
                 html = item.get(field, '')
                 if not html:
                     continue
-                sitemap = analyse_sitemap(base, path, html)
-
-                # replace defaultpages with parents
-                sitemap = [(defaultpage_parent.get(old_path, old_path), new_path)
-                           for old_path, new_path in sitemap]
+                sitemap = self.analyse_sitemap(base, path, html, defaultpage_parent)
 
                 #self.logger.debug(pprint.pprint(sitemap))
                 if sitemap:
                     sitemaps += 1
-                unmerged = list(merge_sitemap(dict(sitemap), unmerged))
+                unmerged = list(self.merge_sitemap(dict(sitemap), unmerged))
                 #self.logger.debug("sitemap %s=%s"% (path,str(sitemap)))
                 #self.logger.debug(pprint.pprint(newpaths))
 
 
-        for newpaths in unmerged:
-            self.logger.debug("==Merged Sitemap==")
-            for newp, oldp in sorted([(v,k) for k,v in newpaths.items()]):
-                self.logger.debug("%s (%s)"%(newp,oldp))
-            self.logger.debug("==================")
 
-
-        # join remaining sitemaps togeather
+        # join remaining sitemaps together and remove duplicates
         newpaths = {}
+        oldpaths = {}
         for sitemap in unmerged:
-            newpaths.update(sitemap)
+            for oldpath,newpath in sitemap.items():
+                if newpath in oldpaths:
+                    # two items have the same site map path :(
+                    # pick the shortest one
+                    self.logger.warning("%s sitemap conflict (%s, %s)"%(newpath,oldpath, oldpaths[newpath]))
+                    if len(oldpath.split('/')) < len(oldpaths[newpath].split('/')):
+                        del newpaths[oldpaths[newpath]]
+                        oldpaths[newpath] = oldpath
+                        newpaths[oldpath] = newpath
+                    else:
+                        # leave existing path in there
+                        oldpath = oldpaths[newpath]
+                else:
+                    oldpaths[newpath] = oldpath
+                    newpaths[oldpath] = newpath
 
-        #Get the parent folder path
-        #import pdb; pdb.set_trace()
+        for newpath, oldpath in sorted([(v,k) for k,v in newpaths.items()]):
+            # Handle case where our parent is not a folder
+            newparentpath = '/'.join(newpath.split('/')[:-1])
+            oldparentpath = oldpaths.get(newparentpath)
+            oldparent = items_by_path.get(oldparentpath)
+            if oldparent is None:
+                continue
+            if oldparent['_type'] != self.folder_type:
+                # we have to convert the parent into a folder with a default page
+                # we need to make it the
 
-        # create index for parent moves
-        # e.g. /A/B -> /C/D then parent_paths['/A'] = '/C'
+                oldparentpath, indexid = oldparentpath.rsplit('/',1)
 
-#        parent_paths = {}
-#        clone_paths = newpaths.copy()
-#        for old_path, new_path in clone_paths.items():
-#            if new_path[0] == '/':
-#                relative_path = new_path[1:]
-#            else:
-#                relative_path = new_path
-#            newpaths[old_path] = relative_path
-#            # you need default_pages attribute in sitemapper pipeline
-#            if old_path.split('/')[-1] in self.default_pages:
-#                parent_path = '/'.join(old_path.split('/')[:-1])
-#                parent_paths[parent_path] = relative_path
-#                newpaths[parent_path] = relative_path
+                # is there an existing folder?
+                newparent = items_by_path.get(oldparentpath)
 
-        #self.logger.debug("first loop : parent_paths")
-        #self.logger.debug(pprint.pprint(parent_paths))
-        #self.logger.debug("first loop : newpaths")
-        #self.logger.debug(pprint.pprint(newpaths))
+                if newparent is None:
+                    self.logger.debug("%s is breadcrumbparent, creating folder" % (oldpath, '/'.join([newparentpath,indexid])) )
+                    newparent = dict(
+                                    _path     = oldparentpath,
+                                    _site_url = item['_site_url'],
+#                                    title = newparentpath.split('/')[-1],
+                                    _type = self.folder_type)
+                    #update our indexes
+                    items.append(newparent)
+                    items_by_path[oldparentpath] = newparent
+                elif '_defaultpage' in newparent:
+                    self.logger.debug("%s is breadcrumbparent but already has defaultpage %s" % (oldpath, '/'.join([newparentpath,newparent['_defaultpage']])) )
+                    continue
+                else:
+                    self.logger.debug("%s is breadcrumbparent, setting as defaultpage %s" % (oldpath, '/'.join([newparentpath,indexid])) )
 
-#        clone_paths = newpaths.copy()
-#        for old_path, new_path in clone_paths.items():
-#            #import pdb; pdb.set_trace()
-#            if old_path.split('/')[:-1] == new_path.split('/')[:-1]:
-#                parent_path = '/'.join(old_path.split('/')[:-1])
-#                if parent_path in parent_paths:
-#                    newpaths[old_path] = new_path.replace(parent_path, parent_paths[parent_path])
-        #self.logger.debug(pprint.pprint(newpaths))
-        #self.logger.debug(pprint.pprint())
+                newparent['_defaultpage'] = indexid
 
-        #import pdb; pdb.set_trace()
+                newpaths[oldparentpath] = newparentpath
+                oldpaths[newparentpath] = oldparentpath
+                #origin = oldparent.get('_origin')
+                #if not origin:
+                #    newparent['_origin'] = path
+                #else:
+                #    newparent['_origin'] = origin
+
+        self.logger.debug("==Merged Sitemap==")
+        for newp, oldp in sorted([(v,k) for k,v in newpaths.items()]):
+            self.logger.debug("%s (%s)"%(newp,oldp))
+        self.logger.debug("==================")
+
         for item in items:
-            #import pdb; pdb.set_trace()
 
             path = item.get('_path')
             if not path:
@@ -185,163 +203,215 @@ class SiteMapper(object):
                 yield item
                 continue
 
-            # move the item in any parent in the sitemap
-            parents = path.split('/')
-            for i in range(len(parents),0,-1):
-                parent_path = '/'.join(parents[0:i])
 
-                if parent_path in newpaths:
+            newpath = newpaths.get(path)
+            #check if we're of the right type
+            #import pdb; pdb.set_trace()
+            matched = False
+            if newpath and self.folder_type and item.get('_type') != self.folder_type:
 
-                    moved += 1
-                    origin = item.get('_origin')
-                    if not origin:
-                        item['_origin'] = path
+                # create new folder so we ensure all sitemap items are folders
 
-                    item['_path'] = path.replace(parent_path, newpaths[parent_path])
-                    self.logger.debug("%s <- %s" % (item['_path'], path))
-                    #item['_breadcrumb'] = item['_path'].split('/')
-                    break
+                newname = 'index'
+                newparent = dict(
+                                _path     = newpath,
+                                _site_url = item['_site_url'],
+                                title = newpath.split('/')[-1],
+                                _defaultpage = newname,
+                                _type = self.folder_type)
+                origin = item.get('_origin')
+                if not origin:
+                    newparent['_origin'] = path
+                else:
+                    newparent['_origin'] = origin
+                yield newparent
+                item['_path'] = '/'.join([newpath,newname])
+                item['_origin'] = '/'.join([newparent['_origin'],newname])
+                self.logger.debug("'%s' created new folder"%item['_path'] )
+                matched = True
+            else:
+                # move the item in any parent in the sitemap
+                parents = path.split('/')
+                for i in range(len(parents), 0, -1):
+                    parent_path = '/'.join(parents[0:i])
+
+                    if parent_path in newpaths:
+                        # one of our parents is in the sitemap so we have to move
+
+
+
+                        moved += 1
+                        origin = item.get('_origin')
+                        if not origin:
+                            item['_origin'] = path
+
+                        item['_path'] = path.replace(parent_path, newpaths[parent_path])
+                        self.logger.debug("%s <- %s" % (item['_path'], path))
+                        #item['_breadcrumb'] = item['_path'].split('/')
+                        matched = True
+                        break
+            if not matched:
+                self.logger.debug("%s didn't match the sitemap"%path)
             yield item
 
         self.logger.info("moved %d/%d from %d sitemaps" % (moved,total,sitemaps))
 
-def merge_sitemap(sitemap, unmerged):
+    def merge_sitemap(self, sitemap, unmerged):
 
 
-    for newpaths in unmerged:
+        for newpaths in unmerged:
 
-        # We find a single common element.
-        common_paths = []
-        for oldpath, newpath in sitemap.items():
-            if newpaths.get(oldpath):
-                common_paths.append(oldpath)
+            # We find a single common element.
+            common_paths = []
+            for oldpath, newpath in sitemap.items():
+                if newpaths.get(oldpath):
+                    common_paths.append(oldpath)
 
-        #import pdb; pdb.set_trace()
-        if not common_paths:
-            yield newpaths
-        else:
-            #TODO should merge on all common
-            common = common_paths[0]
-            # we will form a single sitemap and then continue merging
-
-            # we have common element, now merge
-            new1 = newpaths.get(common).split('/')
-            new2 = sitemap.get(common).split('/')
-
-        #    print("**common: %s" % common)
-        #    print("**newpaths: %s" % (newpaths.get(common)))
-        #    print("**sitemap: %s" % (sitemap.get(common)))
-
-            # we don't need to adjust to do the merge since both at the same level
-            if new1 == new2:
-                sitemap.update(newpaths)
-                continue
-
-    #        if newpaths[common][0] == '/':
-    #            del sitemap[common]
-    #            newpaths.update(sitemap)
-    #            return newpaths
-    #
-    #        if sitemap[common][0] == '/':
-    #            del newpaths[common]
-    #            newpaths.update(sitemap)
-    #            return newpaths
-
-            # Pick the deepest /TopLevel/Crime and /Crime.
-            # TODO what if conflict? e.g. /TopLevel/Crime and /AnotherLevel/Crime
-            if len(new1) > len(new2):
-                mergein = sitemap
-                mergeto = newpaths
+            #import pdb; pdb.set_trace()
+            if not common_paths:
+                yield newpaths
             else:
-                mergein = newpaths
-                mergeto = sitemap
-            base = mergeto[common].split('/')[:-1]
-            minus = len(mergein[common].split('/'))-1
-            notmatched = {}
-            for oldurl, newurl in mergein.items():
-                if newurl.startswith(mergein[common]):
-                    mergednew = '/'.join(base + newurl.split('/')[minus:])
-                    mergeto[oldurl] = mergednew
+                #TODO should merge on all common
+                common = common_paths[0]
+                # we will form a single sitemap and then continue merging
+
+                # we have common element, now merge
+                new1 = newpaths.get(common).split('/')
+                new2 = sitemap.get(common).split('/')
+
+            #    print("**common: %s" % common)
+            #    print("**newpaths: %s" % (newpaths.get(common)))
+            #    print("**sitemap: %s" % (sitemap.get(common)))
+
+                # we don't need to adjust to do the merge since both at the same level
+                if new1 == new2:
+                    sitemap.update(newpaths)
+                    continue
+
+        #        if newpaths[common][0] == '/':
+        #            del sitemap[common]
+        #            newpaths.update(sitemap)
+        #            return newpaths
+        #
+        #        if sitemap[common][0] == '/':
+        #            del newpaths[common]
+        #            newpaths.update(sitemap)
+        #            return newpaths
+
+                # Pick the deepest /TopLevel/Crime and /Crime.
+                # what if conflict? e.g. /TopLevel/Crime and /AnotherLevel/Crime
+                if len(new1) > 1 and len(new2) > 1:
+                    sitemap.update(newpaths)
+                    continue
+
+
+                # deal with /TopLevel/Common and Common (with Common/SubLevel)
+                if len(new1) < len(new2):
+                    mergein = sitemap
+                    mergeto = newpaths
+                    self.logger.debug('merge sitemaps on %s (%s<-%s)'%(common, new1, new2))
                 else:
-                    notmatched[oldurl] = newurl
-            if notmatched:
-                yield notmatched
-            sitemap = mergeto
+                    mergein = newpaths
+                    mergeto = sitemap
+                    self.logger.debug('merge sitemaps on %s (%s<-%s)'%(common, new2, new1))
+                base = mergeto[common].split('/')[:-1]
+                minus = len(mergein[common].split('/'))-1
+                notmatched = {}
+                for oldurl, newurl in mergein.items():
+                    if newurl.startswith(mergein[common]):
+                        mergednew = '/'.join(base + newurl.split('/')[minus:])
 
-    # last sitemap remaining
-    yield sitemap
-
-
-
-def analyse_sitemap(base, base_path, html, use_text=True, nested=True):
-        newpaths = []
-        node = fragment_fromstring(html, create_parent=True)
-        parents = []
-        depth = 0
-        lastdepth = 0
-        found_paths = {}
-        context = etree.iterwalk(node, events=("start", "end"))
-
-        #Current state
-        text = ''
-
-        for action, elem in context:
-            if action == 'start':
-                if elem.tag == 'a':
-                    text = ''
-
-                depth += 1
-            elif action == 'end':
-                # we are collecting text for our id
-                if use_text and elem.text:
-                    text = ' '.join([text]+elem.text.split()).strip()
-                    text = text.replace('/','_')
-
-                # collect text inside the a
-                if elem.tag == 'a':
-
-                    href = elem.attrib.get('href')
-                    url = ''
-                    if href is not None:
-                        url = urljoin(base,href,allow_fragments=False)
-                    path = url[len(base):]
-
-                    if not url.startswith(base):
-                        #it's an external link
-                        pass
-                    elif url == base:
-                        # it's home, lets skip
-                        pass
-                    elif path in found_paths:
-                        # duplicate entry, skip it
-                        # we assume the first one is the better name
-                        pass
+                        mergeto[oldurl] = mergednew
                     else:
-                        found_paths[path] = True
-                        if not text:
-                            id = path.split('/')[-1]
+                        notmatched[oldurl] = newurl
+                if notmatched:
+                    yield notmatched
+                sitemap = mergeto
+
+        # last sitemap remaining
+        yield sitemap
+
+
+
+    def analyse_sitemap(self, base, base_path, html, defaultpage_parent, use_text=True, nested=True):
+            newpaths = []
+            node = fragment_fromstring(html, create_parent=True)
+            parents = []
+            depth = 0
+            lastdepth = 0
+            found_paths = {}
+            context = etree.iterwalk(node, events=("start", "end"))
+
+            extra_text = []
+
+            #Current state
+            text = ''
+
+            for action, elem in context:
+                if action == 'start':
+                    if elem.tag == 'a':
+                        text = ''
+
+                    depth += 1
+                elif action == 'end':
+                    # we are collecting text for our id
+                    if use_text and elem.text:
+                        text = ' '.join([text]+elem.text.replace('/',' ').split()).strip()
+
+                    # collect text inside the a
+                    if elem.tag == 'a':
+
+                        href = elem.attrib.get('href')
+                        url = ''
+                        if href is not None:
+                            url = urljoin(base,href,allow_fragments=False)
+                        path = url[len(base):]
+
+                        if not url.startswith(base):
+                            #it's an external link
+                            pass
+                        elif url == base:
+                            # it's home, lets skip
+                            pass
+                        elif path in found_paths:
+                            # duplicate entry, skip it
+                            # we assume the first one is the better name
+                            pass
                         else:
-                            id = text
+                            found_paths[path] = True
+                            if not text:
+                                id = path.split('/')[-1]
+                            else:
+                                id = text
 
-                        if nested:
-                            parents = [(d,p) for d,p in parents if d<depth]
-                        parents = parents + [(depth,id)]
-                        relpath = '/'.join([p for d,p in parents])
-                        #if base_path:
-                        #    relpath = '/'.join([base_path,relpath])
-                        newpaths.append( (path, relpath) )
-                        #newpaths.append( (path, relpath) )
-                        lastdepth = depth
+                            if nested:
+                                parents = [(d,p) for d,p in parents if d<depth]
+                            parents = parents + [(depth,id)]
+                            relpath = '/'.join([p for d,p in parents])
+                            #if base_path:
+                            #    relpath = '/'.join([base_path,relpath])
+                            newpaths.append( (path, relpath) )
+                            #newpaths.append( (path, relpath) )
+                            lastdepth = depth
+                    elif text:
+                        extra_text.append(text)
                     text = ''
+                    if use_text and elem.tail:
+                        text = ' '.join([text]+elem.tail.replace('/',' ').split()).strip()
 
-                if nested:
-                    depth -= 1
+                    if nested:
+                        depth -= 1
 
-        # special case: use unlinked text at end of breadcrumb for cur path
-        if not nested and text:
-            lastold, lastnew = newpaths[-1]
-            newpaths.append( (base_path, '/'.join([lastnew,text]) ))
-        return newpaths
+            # replace defaultpages with parents
+            newpaths = [(defaultpage_parent.get(old_path, old_path), new_path) for old_path, new_path in newpaths]
+
+            # special case: use unlinked text at end of breadcrumb for cur path
+            # don't replace default page for this link due to way breadcrumbs work
+            if not nested and extra_text:
+                lastold, lastnew = newpaths[-1]
+                if lastold != base_path:
+                    newpaths.append( (base_path, '/'.join([lastnew,extra_text[-1]]) ))
+            return newpaths
 
 sitemap1 = """
 <ul>
