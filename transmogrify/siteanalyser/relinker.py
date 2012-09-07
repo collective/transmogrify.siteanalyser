@@ -44,6 +44,7 @@ class Relinker(object):
         items = {}
         
         self.missing = set([])
+        self.bad_pages = 0
         
         for item in self.previous:
             path = item.get('_path',None)
@@ -58,22 +59,28 @@ class Relinker(object):
             origin = item.get('_origin')
             if not origin:
                 origin = item['_origin'] = path
+            else:
+                self.logger.debug("%s <- %s (relinked)" % (path, origin))
             link = urllib.unquote_plus(base+origin)
 
 
             changes[link] = item
             items[path] = item
-            self.logger.debug("%s <- %s (relinked)" % (path, origin))
+
 
         for item in changes.values():
             counter = Counter()
 
             if '_defaultpage' in item:
-                if item['_origin']:
-                    index = item['_site_url'] + item['_origin'] + '/' + item['_defaultpage']
+                # get index item based on it's old path
+
+                if '_origin' in item:
+                    oldpath = item['_origin']
                 else:
-                    index = item['_site_url'] + item['_defaultpage']
-                newindex = changes.get(index)
+                    # maybe we didn't change but the index did
+                    oldpath = item['_path']
+                indexpath = item['_site_url'] + '/'.join([p for p in [oldpath, item['_defaultpage']] if p])
+                newindex = changes.get(indexpath)
                 #need to work out if the new index is still in this folder
                 if newindex is not None:
                     # is the parent of our indexpage still 'item'?
@@ -91,16 +98,20 @@ class Relinker(object):
                         # leave in defaultpage and hope redirection takes care of it
                     #    import pdb; pdb.set_trace()
                 else:
-                    # why was it set then?? #TODO
-                    # index moved elsewhere so defaultpage setting is off
-                    import pdb; pdb.set_trace()
-                    del item['_defaultpage']
-                    self.logger.warning("'%s' default page remove" % (item['_path']))
+                    indexpath = item['_path'] + '/' + item['_defaultpage']
+                    if indexpath in items:
+                        # we don't need to rewrite defaultpage
+                        pass
+                    else:
+                        # why was it set then?? #TODO
+                        # index moved elsewhere so defaultpage setting is off
+                        import pdb; pdb.set_trace()
+                        del item['_defaultpage']
+                        self.logger.warning("'%s' default page remove" % (item['_path']))
             if 'remoteUrl' in item:
                 link = item['_site_url']+urljoin(item['_origin'],item['remoteUrl'])
                 # have to put ./ in front of Link
                 item['remoteUrl'] = "./"+replace(link, item, changes, counter, self.missing, bad)
-
 
             if item.get('_mimetype') in ['text/xhtml', 'text/html']:
                 self.relinkHTML(item, changes, counter, bad)
@@ -122,7 +133,8 @@ class Relinker(object):
     
             yield item
         if self.missing:
-            self.logger.warning("%d broken internal links. Content maybe missing. Debug to see details." % len(self.missing) )
+            self.logger.warning("%d broken internal links in %d pages. "
+                                "Content maybe missing. Debug to see details." % (len(self.missing),self.bad_pages))
 
 
     def relinkHTML(self, item, changes, counter, bad={}):
@@ -145,6 +157,9 @@ class Relinker(object):
         missing = set([])
         item_replace = lambda link: replace(link, item, changes, counter, missing, bad)
         self.missing = self.missing.union(missing)
+        if missing:
+            self.bad_pages += 1
+
         for field, tree in html.items():
             old_count = counter.counter
 
@@ -157,7 +172,7 @@ class Relinker(object):
             if counter.counter != old_count:
                 item[field] = etree.tostring(tree, pretty_print=True, encoding=unicode, method='html')
         for link in missing:
-            self.logger.warning("%s broken link '%s'" % (item['_path'], link))
+            self.logger.debug("%s broken link '%s'" % (item['_path'], link))
         self.logger.debug("'%s' relinked %s links in %s" % (item['_path'], counter.counter, html.keys()))
 
      #   except Exception:

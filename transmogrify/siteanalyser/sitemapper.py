@@ -41,6 +41,7 @@ class SiteMapper(object):
         self.options = options
         # if set will ensure all sitemap items are of this type, using defaultpage if needed
         self.folder_type = options.get('folder-type','Folder').strip()
+        self.convert_to_folders = False
 
         self.name = name
         self.logger = logging.getLogger(name)
@@ -94,9 +95,12 @@ class SiteMapper(object):
                 html = item.get(self.breadcrumb_field, '')
                 # assume all breadcrumbs start from /
                 sitemap = self.analyse_sitemap(base, path, html,  defaultpage_parent, nested=False)
+                # special case where path isn't in the breadcrumbs
+                if path not in [p for p,n in sitemap]:
+                    # we'll assume the last sitemap item is our parent
+                    pass
 
-                ## breadcrumbs can contain conflicting sitemaps. Assume we crawl it all so just need the last
-                #sitemap = sitemap[-1:]
+
 
                 #self.logger.debug(pprint.pprint(sitemap))
                 if sitemap:
@@ -133,6 +137,8 @@ class SiteMapper(object):
                 if newpath in oldpaths:
                     # two items have the same site map path :(
                     # pick the shortest one
+                    if oldpath == oldpaths[newpath]:
+                        continue
                     self.logger.warning("%s sitemap conflict (%s, %s)"%(newpath,oldpath, oldpaths[newpath]))
                     if len(oldpath.split('/')) < len(oldpaths[newpath].split('/')):
                         del newpaths[oldpaths[newpath]]
@@ -151,6 +157,8 @@ class SiteMapper(object):
             oldparentpath = oldpaths.get(newparentpath)
             oldparent = items_by_path.get(oldparentpath)
             if oldparent is None:
+                continue
+            if '/' not in oldparentpath:
                 continue
             if oldparent['_type'] != self.folder_type:
                 # we have to convert the parent into a folder with a default page
@@ -171,6 +179,7 @@ class SiteMapper(object):
                     #update our indexes
                     items.append(newparent)
                     items_by_path[oldparentpath] = newparent
+#                    self.logger.debug("'%s' created new folder"%item['_path'] )
                 elif '_defaultpage' in newparent:
                     self.logger.debug("%s is breadcrumbparent but already has defaultpage %s" % (oldpath, '/'.join([newparentpath,newparent['_defaultpage']])) )
                     continue
@@ -208,7 +217,7 @@ class SiteMapper(object):
             #check if we're of the right type
             #import pdb; pdb.set_trace()
             matched = False
-            if newpath and self.folder_type and item.get('_type') != self.folder_type:
+            if self.convert_to_folders and newpath and self.folder_type and item.get('_type') != self.folder_type:
 
                 # create new folder so we ensure all sitemap items are folders
 
@@ -220,13 +229,14 @@ class SiteMapper(object):
                                 _defaultpage = newname,
                                 _type = self.folder_type)
                 origin = item.get('_origin')
-                if not origin:
-                    newparent['_origin'] = path
-                else:
-                    newparent['_origin'] = origin
+                #if not origin:
+                #    newparent['_origin'] = path
+                #else:
+                #    newparent['_origin'] = origin
                 yield newparent
+                if origin is None:
+                    item['_origin'] = item['_path']
                 item['_path'] = '/'.join([newpath,newname])
-                item['_origin'] = '/'.join([newparent['_origin'],newname])
                 self.logger.debug("'%s' created new folder"%item['_path'] )
                 matched = True
             else:
@@ -237,9 +247,6 @@ class SiteMapper(object):
 
                     if parent_path in newpaths:
                         # one of our parents is in the sitemap so we have to move
-
-
-
                         moved += 1
                         origin = item.get('_origin')
                         if not origin:
@@ -393,8 +400,12 @@ class SiteMapper(object):
                             newpaths.append( (path, relpath) )
                             #newpaths.append( (path, relpath) )
                             lastdepth = depth
+                    elif not isinstance(elem.tag, basestring):
+                        # it's a comment
+                        pass
                     elif text:
                         extra_text.append(text)
+
                     text = ''
                     if use_text and elem.tail:
                         text = ' '.join([text]+elem.tail.replace('/',' ').split()).strip()
@@ -407,10 +418,16 @@ class SiteMapper(object):
 
             # special case: use unlinked text at end of breadcrumb for cur path
             # don't replace default page for this link due to way breadcrumbs work
-            if not nested and extra_text:
+            if not nested and len(newpaths):
                 lastold, lastnew = newpaths[-1]
                 if lastold != base_path:
-                    newpaths.append( (base_path, '/'.join([lastnew,extra_text[-1]]) ))
+                    if extra_text:
+                        newpaths.append( (base_path, '/'.join([lastnew,extra_text[-1]]) ))
+                    else:
+                        # Need to include our link in there somewhere. We'll assume last part of breadcrumb is parent
+                        oldid = base_path.split('/')[-1]
+                        newpaths.append( (base_path, '/'.join([lastnew,oldid]) ))
+
             return newpaths
 
 sitemap1 = """
