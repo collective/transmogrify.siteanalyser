@@ -32,7 +32,6 @@ setup(name='transmogrify.siteanalyser',
           'lxml',
           'BeautifulSoup',
           'collective.transmogrifier',
-          'plone.i18n'
           ],
       entry_points="""
             [z3c.autoinclude.plugin]

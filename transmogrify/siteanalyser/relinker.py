@@ -2,7 +2,6 @@
 from zope.interface import implements
 from zope.interface import classProvides
 from zope.component import queryUtility
-from plone.i18n.normalizer.interfaces import IURLNormalizer
 
 from collective.transmogrifier.interfaces import ISectionBlueprint
 from collective.transmogrifier.interfaces import ISection
