@@ -104,9 +104,9 @@ class Relinker(object):
                     else:
                         # why was it set then?? #TODO
                         # index moved elsewhere so defaultpage setting is off
-                        import pdb; pdb.set_trace()
+                        #import pdb; pdb.set_trace()
+                        self.logger.warning("'%s' had default page '%s' set but it is missing. Removing defaultpage reference" % (item['_path'], item['_defaultpage']))
                         del item['_defaultpage']
-                        self.logger.warning("'%s' default page remove" % (item['_path']))
             if 'remoteUrl' in item:
                 link = item['_site_url']+urljoin(item['_origin'],item['remoteUrl'])
                 # have to put ./ in front of Link

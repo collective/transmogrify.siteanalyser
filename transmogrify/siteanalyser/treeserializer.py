@@ -33,6 +33,7 @@ class TreeSerializer(object):
                 items[base+path] = item
 
 
+
         added_folders = set({})
         added_index = set()
         # build tree

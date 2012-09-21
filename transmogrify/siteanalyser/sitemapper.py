@@ -72,12 +72,15 @@ class SiteMapper(object):
 
             # find the sitemap
             path = item.get('_path')
-            if not path:
+            if path is None:
                 yield item
                 continue
 
+
+
             if item.get('_defaultpage'):
-                defaultpage_parent[item['_path']+'/'+item.get('_defaultpage')] = path
+                defaultpage_path = '/'.join([p for p in [item['_path'],item.get('_defaultpage')] if p])
+                defaultpage_parent[defaultpage_path] = path
             items_by_path[item['_path']] = item
 
             items.append(item)
@@ -88,7 +91,7 @@ class SiteMapper(object):
             base = item['_site_url']
             path = defaultpage_parent.get(path,path)
             #base_path = '/'.join(path.split('/')[:-1])
-            #if 'programs-activities/news/newsletter' in path:
+            #if 'search/search.asp' in path:
             #    import pdb; pdb.set_trace()
 
             if self.breadcrumb_field and self.breadcrumb_field in item:
@@ -242,21 +245,31 @@ class SiteMapper(object):
             else:
                 # move the item in any parent in the sitemap
                 parents = path.split('/')
+                parent_path = None
                 for i in range(len(parents), 0, -1):
                     parent_path = '/'.join(parents[0:i])
-
                     if parent_path in newpaths:
                         # one of our parents is in the sitemap so we have to move
-                        moved += 1
-                        origin = item.get('_origin')
-                        if not origin:
-                            item['_origin'] = path
-
-                        item['_path'] = path.replace(parent_path, newpaths[parent_path])
-                        self.logger.debug("%s <- %s" % (item['_path'], path))
-                        #item['_breadcrumb'] = item['_path'].split('/')
                         matched = True
                         break
+                if matched:
+                    origin = item.get('_origin')
+                    if not origin:
+                        item['_origin'] = path
+
+                    #newp = newpaths[parent_path].split('/')
+                    #oldp = parent_path.split('/')
+                    if False and path == parent_path and len(newp) == len(oldp):
+                        import pdb; pdb.set_trace()
+                        # in this case we can use the old path and set the title based
+                        # on the new path
+                        if 'title' not in item:
+                            item['title'] = newp[-1]
+                    else:
+                        item['_path'] = path.replace(parent_path, newpaths[parent_path])
+                    self.logger.debug("%s <- %s" % (item['_path'], path))
+                    #item['_breadcrumb'] = item['_path'].split('/')
+                    moved += 1
             if not matched:
                 self.logger.debug("%s didn't match the sitemap"%path)
             yield item
@@ -373,11 +386,13 @@ class SiteMapper(object):
                         if href is not None:
                             url = urljoin(base,href,allow_fragments=False)
                         path = url[len(base):]
+                        #replace the old_path with the parents if its a defualt page
+                        path = defaultpage_parent.get(path, path)
 
                         if not url.startswith(base):
                             #it's an external link
                             pass
-                        elif url == base:
+                        elif path == '':
                             # it's home, lets skip
                             pass
                         elif path in found_paths:
@@ -397,6 +412,7 @@ class SiteMapper(object):
                             relpath = '/'.join([p for d,p in parents])
                             #if base_path:
                             #    relpath = '/'.join([base_path,relpath])
+
                             newpaths.append( (path, relpath) )
                             #newpaths.append( (path, relpath) )
                             lastdepth = depth
@@ -413,8 +429,6 @@ class SiteMapper(object):
                     if nested:
                         depth -= 1
 
-            # replace defaultpages with parents
-            newpaths = [(defaultpage_parent.get(old_path, old_path), new_path) for old_path, new_path in newpaths]
 
             # special case: use unlinked text at end of breadcrumb for cur path
             # don't replace default page for this link due to way breadcrumbs work
