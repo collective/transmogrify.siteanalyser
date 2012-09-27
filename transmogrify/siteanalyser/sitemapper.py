@@ -42,6 +42,7 @@ class SiteMapper(object):
         # if set will ensure all sitemap items are of this type, using defaultpage if needed
         self.folder_type = options.get('folder-type','Folder').strip()
         self.convert_to_folders = False
+        self.exclusion = options.get('exclude-from-navigation-key', 'exclude-from-navigation')
 
         self.name = name
         self.logger = logging.getLogger(name)
@@ -187,6 +188,7 @@ class SiteMapper(object):
                     self.logger.debug("%s is breadcrumbparent but already has defaultpage %s" % (oldpath, '/'.join([newparentpath,newparent['_defaultpage']])) )
                     continue
                 else:
+                    import pdb; pdb.set_trace()
                     self.logger.debug("%s is breadcrumbparent, setting as defaultpage %s" % (oldpath, '/'.join([newparentpath,indexid])) )
 
                 newparent['_defaultpage'] = indexid
@@ -271,7 +273,12 @@ class SiteMapper(object):
                     #item['_breadcrumb'] = item['_path'].split('/')
                     moved += 1
             if not matched:
+                if self.exclusion:
+                    item[self.exclusion] = 'True'
                 self.logger.debug("%s didn't match the sitemap"%path)
+            else:
+                if self.exclusion:
+                    item[self.exclusion] = 'False'
             yield item
 
         self.logger.info("moved %d/%d from %d sitemaps" % (moved,total,sitemaps))
