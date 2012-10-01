@@ -62,6 +62,10 @@ class Relinker(object):
                 self.logger.debug("%s <- %s (relinked)" % (path, origin))
             link = urllib.unquote_plus(base+origin)
 
+            if link in changes:
+                raise Exception("duplicate redirects: both '%s 'and '%s' were redirected from '%s'" %
+                            (changes[link]['_path'], item['_path'], link))
+
 
             changes[link] = item
             items[path] = item
@@ -129,7 +133,7 @@ class Relinker(object):
                     newbacklinks.append((origin,name))
             if backlinks:
                 item['_backlinks'] = newbacklinks
-    
+
             yield item
         if self.missing:
             self.logger.warning("%d broken internal links in %d pages. "
