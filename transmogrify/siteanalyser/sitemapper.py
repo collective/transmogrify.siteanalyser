@@ -43,6 +43,7 @@ class SiteMapper(object):
         self.folder_type = options.get('folder-type','Folder').strip()
         self.convert_to_folders = False
         self.exclusion = options.get('exclude-from-navigation-key', 'exclude-from-navigation')
+        self.title_key = options.get('title-key','title')
 
         self.name = name
         self.logger = logging.getLogger(name)
@@ -265,13 +266,14 @@ class SiteMapper(object):
                         import pdb; pdb.set_trace()
                         # in this case we can use the old path and set the title based
                         # on the new path
-                        if 'title' not in item:
-                            item['title'] = newp[-1]
                     else:
                         item['_path'] = path.replace(parent_path, newpaths[parent_path])
                     self.logger.debug("%s <- %s" % (item['_path'], path))
                     #item['_breadcrumb'] = item['_path'].split('/')
                     moved += 1
+            if newpath and self.title_key and self.title_key not in item:
+                item[self.title_key] = newpath.split('/')[-1]
+
             if not matched:
                 if self.exclusion:
                     item[self.exclusion] = 'True'
