@@ -98,6 +98,7 @@ class UrlTidy(object):
             else:
                 newpath = path
 
+
             if 'title' in item and self.use_title(item):
                 #TODO This has problem that for relinking to work we need to change the full url
                 parts = newpath.split('/')

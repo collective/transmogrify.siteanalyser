@@ -51,14 +51,15 @@ class TreeSerializer(object):
 #            if parts[0] == '':
 #                parts = parts[1:]
 
+
             basepath = ''
             parentpath = ''
             parent = items.get(item['_site_url'])
             #self.logger.debug("'%s' analysing item" %(item['_path']))
             for part in parts:
                 basepath += part
-
-                if item['_site_url']+basepath in items:
+                parentexists = item['_site_url']+basepath in items
+                if parentexists:
                     #case where folder has text
                     if parent and parent.get('text', None) is not None:
                         # move to default page and replace with folder
@@ -83,6 +84,7 @@ class TreeSerializer(object):
                         items[item['_site_url']+parentpath] = newparent
 
                         self.logger.debug("treeserialize: moved folder to %s" %(parent['_path']))
+
                 else:
                     # parent which hasn't had a folder added yet
                     newparent = dict(
@@ -96,6 +98,19 @@ class TreeSerializer(object):
                     parent = items.get(item['_site_url']+basepath)
                     if basepath != '':
                         basepath += '/'
+
+#            if 'have-your-say' in item['_path']:
+#                import pdb; pdb.set_trace()
+            # case where our parent is redirection. Check it isn't a redirection to us
+            if parent and parent.get('remoteUrl',None) is not None and parent.get('_defaultpage') is None:
+                if parent['remoteUrl'] == parts[-1]:
+                    # we should use defaultpage instead
+                    parent['_type'] = self.default_containers[0]
+                    parent['_defaultpage'] = parts[-1]
+                    added_index.add(parent['_path'])
+                    del parent['remoteUrl']
+                    self.logger.debug("'%s' set defaultpage='%s'" %(parent['_path'],parts[-1]))
+
 
             #case item is a default page
             # look at _origin_path to see if it was originally an index
