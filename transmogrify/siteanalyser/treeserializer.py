@@ -109,6 +109,7 @@ class TreeSerializer(object):
                     parent['_defaultpage'] = parts[-1]
                     added_index.add(parent['_path'])
                     del parent['remoteUrl']
+
                     self.logger.debug("'%s' set defaultpage='%s'" %(parent['_path'],parts[-1]))
 
 
@@ -126,6 +127,13 @@ class TreeSerializer(object):
                 # also in case we added the parent ourselves we need to give a sortorder
                 if parent.get('_sortorder', None) is None:
                     parent['_sortorder'] = item.get('_sortorder', None)
+
+            #ensure defaultpage has no _orig_path from parent
+            if parts and parent and parent.get('_defaultpage') == parts[-1]:
+                if item.get('_orig_path') == parent['_path']:
+                    del item['_orig_path']
+
+            #TODO should ensure that no parent has _orig_path as it can lead to weird redir
 
 
         self.logger.info("%d folders added. %d defaultpages set, %d items sorted" %
