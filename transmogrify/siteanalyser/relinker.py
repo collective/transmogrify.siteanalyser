@@ -60,8 +60,12 @@ class Relinker(object):
             link = urllib.unquote_plus(base + origin)
 
             if link in changes:
-                raise Exception("duplicate redirects: both '%s 'and '%s' were redirected from '%s'" %
-                            (changes[link]['_path'], item['_path'], link))
+                self.logger.warning("duplicate redirects: both '%s 'and '%s' were redirected from '%s'" %
+                    (changes[link]['_path'], item['_path'], link))
+                # it happens when both links, which have different text, eg: street and road, link to same URL
+                # should we raise exception?
+                #raise Exception("duplicate redirects: both '%s 'and '%s' were redirected from '%s'" %
+                #            (changes[link]['_path'], item['_path'], link))
 
             changes[link] = item
             items[path] = item
