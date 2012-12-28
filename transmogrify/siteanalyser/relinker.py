@@ -29,17 +29,6 @@ Options:
 :ignore_duplicates:
   If 'True' there won't be an error raised when two items were redirected from the same place. This can occur with
   some CMS's where content can be in different urls in the site
-=======
-#import urllib
-from external.relative_url import relative_url
-#from sys import stderr
-#from collective.transmogrifier.utils import Expression
-import logging
-#from external.normalize import urlnormalizer as normalizer
-import urlparse
-#from sys import stderr
-#from plone.i18n.normalizer import urlnormalizer as normalizer
->>>>>>> 99c848b08ab582b860086322b5419436c7163d49
 
 :broken_link_normalise:
   TAL expressions, each on a new line, which take 'url' from inside the html and returns a link that will match one of
