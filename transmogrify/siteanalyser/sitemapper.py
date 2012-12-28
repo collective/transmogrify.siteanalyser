@@ -219,7 +219,7 @@ class SiteMapper(object):
                     self.logger.debug("%s is breadcrumbparent but already has defaultpage %s" % (oldpath, '/'.join([newparentpath,newparent['_defaultpage']])) )
                     continue
                 else:
-                    import pdb; pdb.set_trace()
+                    #import pdb; pdb.set_trace()
                     self.logger.debug("%s is breadcrumbparent, setting as defaultpage %s" % (oldpath, '/'.join([newparentpath,indexid])) )
 
                 newparent['_defaultpage'] = indexid
