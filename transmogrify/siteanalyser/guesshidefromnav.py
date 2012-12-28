@@ -7,17 +7,35 @@ from collective.transmogrifier.utils import Matcher,Condition
 import logging
 
 """
-Guess Hide From Nav
-===================
+
+transmogrify.siteanalyser.hidefromnav
+=====================================
 
 This blueprint will guess which folders should be hidden from the navigation tree.
 It does this by one of three rules
 
 1. Gather all links in the _template html left over after content extraction
-and assume anything linked from outside the content should have their folders shown and 
+and assume anything linked from outside the content should have their folders shown and
 anything else should be hidden. #TODO
 2. Any folders with content found only via img links will also be hidden. #TODO
 3. The condition to set to tree for the item to hide
+
+Options
+
+:key:
+  Default is '_exclude-from-navigation'.
+
+:condition:
+  Default is 'python:False'
+
+:template_key:
+  #TODO
+  Default is '_template'
+
+:hide_img_folders:
+  #TODO
+  Default is 'True'
+
 """
 
 class GuessHideFromNav(object):

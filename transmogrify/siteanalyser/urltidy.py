@@ -16,12 +16,35 @@ import urllib
 
 
 """
-UrlTidy
-=======
+transmogrify.siteanalyser.urltidy
+=================================
+Will  normalize ids in urls to be suitable for adding to plone.
 
-Heuristics for making nicer item ids/urls.
-It can use existing ids and normalise them using plone like rules for cleaning up short names.
-It can optionally rename items based on their title.
+The following will tidy up the URLs based on a TALES expression ::
+
+ $> bin/funnelweb --urltidy:link_expr="python:item['_path'].endswith('.html') and item['_path'][:-5] or item['_path']"
+
+If you'd like to move content around before it's uploaded you can use the urltidy step as well e.g. ::
+
+ $> bin/funnelweb --urltidy:link_expr=python:item['_path'].startswith('/news') and '/otn/news'+item['path'][5:] or item['_path']
+
+
+Options:
+
+:condition:
+  TAL Expression to apply transform
+
+:locale:
+  TAL Expression to return the locale used for id normalisation. e.g. 'string:en'
+
+:link_expr:
+  TAL Expression to alter the items '_path'
+
+:use_title:
+  Condition TAL Expression to change the end path element to a normalised version of item['_title']
+
+
+
 
 """
 

@@ -15,6 +15,30 @@ import urlparse
 import re
 
 
+"""
+transmogrify.siteanalyser.relinker
+==================================
+Help restructure your content.
+If you'd like to move content from one path to another then in a
+previous blueprints adjust the '_path' to the new path. Create a new field
+called '_origin' and put the old path into that. Once you pass it through
+the relinker all href, img tags etc will be changed in any html content where they
+pointed to content that has since moved. All '_origin' fields will be removed
+after relinking.
+
+Options:
+
+:ignore_duplicates:
+  If 'True' there won't be an error raised when two items were redirected from the same place. This can occur with
+  some CMS's where content can be in different urls in the site
+
+:broken_link_normalise:
+  TAL expressions, each on a new line, which take 'url' from inside the html and returns a link that will match one of
+  the existing links in the site. Must return the full url, not the path. This is useful when many different links
+  could go to the same content.
+
+"""
+
 class Counter:
     counter = 0
 

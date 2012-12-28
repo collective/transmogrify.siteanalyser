@@ -7,6 +7,33 @@ from collective.transmogrifier.interfaces import ISection
 
 import logging
 
+"""
+transmogrify.pathsorter
+==================================
+
+If items are at the same level in a folder then they will be sorted based on a
+'_sortorder' key as given by transmogrify.webcrawler.
+
+In addition
+
+
+- if a container has a 'text' key then a default page will be created.
+
+- if item's name is in 'default_pages' and it's parent doesn't already have a defaultpage
+  then the item will be set as the parents default page.
+
+Options:
+
+:default_pages:
+  Set item as to be set as the default page of it's parent if it matches one of these names.
+  Default is 'index.html'
+
+:default_containers:
+  if an item doesn't exist for a given items parent it will be created. The _type key will
+  be set to the first item in 'default_containers'. Default is 'Folder'.
+
+"""
+
 class TreeSerializer(object):
     classProvides(ISectionBlueprint)
     implements(ISection)

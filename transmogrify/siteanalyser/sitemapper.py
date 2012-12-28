@@ -18,11 +18,40 @@ import pprint
 
 
 """
-SiteMapper
-==========
+transmogrify.siteanalyser.sitemapper
+====================================
+Take navigation html such as a whole sitemap, breadcrumbs or navigation menus using nested links
+and buildup a site structure and titles
+for pages. This can then be used to cleanup urls and titles for items as well as hide content that shouldn't be
+displayed in menus. This is useful for cleaning up sites with a flat url scheme such 'display?id=xxx' type sites.
 
-Analyse html for links in sitemap like structure. Then rearrage items based on that
-structure.
+
+Options:
+
+:field:
+  Name of a field from item which contains a sitemap or nested links
+
+:field_expr:
+  Expression to determine the field which contains a sitemap
+
+:breadcrumb_field:
+  Key of the field which contains breadcrumb style html. e.g. <a href="..">Folder</a> &gt; Item.
+
+:folder-type:
+  If set will ensure all parents in sitemap are of this Type, moving item to defaultpage if needed
+
+:exclude-from-navigation-key:
+  Will set this key to 'True' if this item is not found in the sitemap. Defaults to 'exclude-from-navigation'
+
+:title-key:
+  Update this field with the title taken from the sitemap if no title already exists
+
+:path_sub:
+  Newline seperated regular expressions and substitions to adjust paths so change where content is moved to
+
+:condition:
+  TAL expression which if false, don't move this item
+
 
 """
 

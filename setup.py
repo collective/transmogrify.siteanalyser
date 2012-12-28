@@ -1,12 +1,28 @@
 from setuptools import setup, find_packages
 import os
+import re
 
 version = '1.3'
+
+def docstring(file):
+    py = open(os.path.join("transmogrify", "siteanalyser", file)).read()
+    return re.findall('"""(.*?)"""', py, re.DOTALL)[0]
+
+
 
 setup(name='transmogrify.siteanalyser',
       version=version,
       description="transmogrifier source blueprints for crawling html",
-      long_description=open('README.rst').read() +'\n'+
+      long_description=open('README.rst').read() +'\n' + \
+                       docstring('sitemapper.py') + \
+                       docstring('urltidy.py') + \
+                       docstring('makeattachments.py') + \
+                       docstring('backlinkstitle.py') + \
+                       docstring('guesshidefromnav.py') + \
+                       docstring('isindex.py') + \
+                       docstring('relinker.py') + \
+                       docstring('treeserializer.py') + \
+
 #                       open(os.path.join("transmogrify", "siteanalyser", "isindex.txt")).read() + "\n" +
 #                       open(os.path.join("transmogrify", "siteanalyser", "relinker.txt")).read() + "\n" +
 #                       open(os.path.join("transmogrify", "siteanalyser", "makeattachments.txt")).read() + "\n" +

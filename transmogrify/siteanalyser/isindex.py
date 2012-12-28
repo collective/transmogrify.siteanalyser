@@ -16,6 +16,43 @@ from treeserializer import TreeSerializer
 
 import logging
 
+"""
+transmogrify.siteanalyser.defaultpage
+=====================================
+To determine if an item is a default page for a container (it has many links
+to items in that container, even if not contained in that folder), and then move
+it to that folder.
+
+Options:
+
+:mode:
+  'links' or 'path' (default=links).
+  'links' mode uses links
+  to determine if a item is a defaultpage of a subtree by looking at it's links.
+  'path' mode uses parent_path expression to
+  determine if an item is a defaultpage of that parent.
+
+:min_links:
+  If a page has as at least this number of links that point to content in a folder
+  then move it there and make it the defaultpage. (default=2)
+
+:max_uplinks:
+  If a page has more than max_uplinks it won't be moved. (default=2)
+
+:parent_path:
+        Rule is defined by entered
+        parent_path option which is expression with access to item,
+        transmogrifier, name, options and modules variables.
+        Returned value is used to find possible parent item by path. If found,
+        item is moved to that parent item, parent item _defaultpage key is set
+        appropriately, and we turn to processing another item in a pipeline. So
+        the first item in pipeline will take precedence in case parent_path rule
+        returns more than one item for the same parent.
+
+:condition:
+  default=python:True
+
+"""
 
 class IsIndex(object):
     classProvides(ISectionBlueprint)

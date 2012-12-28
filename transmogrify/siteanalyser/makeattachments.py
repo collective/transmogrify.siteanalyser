@@ -8,7 +8,43 @@ import logging
 import lxml
 import urlparse
 
+"""
 
+
+transmogrify.siteanalyser.attach
+================================
+
+Find items and move them if they are tightly linked to a single page. For example if an image
+is located in an images folder, but is only referenced from a single img element on a page in
+/page then the image will be 'merged' with the page.
+How the merge occurs depends on the 'fields' setting. Merging can either be moving the content
+of the subitem into a field of the parent item, or it can be via containment.
+
+
+
+or the following will only move attachments that are images and use ``index-html`` as the new
+name for the default page of the newly created folder ::
+
+  [funnelweb]
+  recipe = funnelweb
+  attachmentguess-condition = python: subitem.get('_type') in ['Image']
+  attachmentguess-defaultpage = index-html
+
+Options
+
+:fields:
+  TAL Expression to return the a dictionary of changes to ``item``. It will use ``item``, ``subitem`` and ``i`` variables.
+  e.g. python:{'attachment':subitem['text']}. This will be called for all subitems. The subitems will be deleted.
+
+:condition:
+  TAL Expression to apply transform
+  (default='python:True')
+
+:defaultpage:
+  (default='index-html')
+
+
+"""
 
 class MakeAttachments(object):
     classProvides(ISectionBlueprint)
