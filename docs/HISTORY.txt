@@ -1,8 +1,8 @@
 Changelog
 =========
 
-1.3 (Unreleased)
----------------------
+1.3 (2012-12-28)
+----------------
 
 - added sitemapper blueprint
 - converted text to unicode baseNormalize because decomposition needs unicode valute to works properly [gborelli]
