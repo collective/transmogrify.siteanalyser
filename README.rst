@@ -7,6 +7,40 @@ Introduction
 Transmogrifier blueprints that look at how html items are linked to gather metadata
 about items. They can help you restructure your content.
 
+transmogrify.siteanalyser.sitemapper
+====================================
+Take navigation html such as a whole sitemap, breadcrumbs or navigation menus using nested links
+and buildup a site structure and titles
+for pages. This can then be used to cleanup urls and titles for items as well as hide content that shouldn't be
+displayed in menus. This is useful for cleaning up sites with a flat url scheme such 'display?id=xxx' type sites.
+
+
+Options:
+
+:field:
+  Name of a field from item which contains a sitemap or nested links
+
+:field_expr:
+  Expression to determine the field which contains a sitemap
+
+:breadcrumb_field:
+  Key of the field which contains breadcrumb style html. e.g. <a href="..">Folder</a> &gt; Item.
+
+:folder-type:
+  If set will ensure all parents in sitemap are of this Type, moving item to defaultpage if needed
+
+:exclude-from-navigation-key:
+  Will set this key to 'True' if this item is not found in the sitemap. Defaults to 'exclude-from-navigation'
+
+:title-key:
+  Update this field with the title taken from the sitemap if no title already exists
+
+:path_sub:
+  Newline seperated regular expressions and substitions to adjust paths so change where content is moved to
+
+:condition:
+  TAL expression which if false, don't move this item
+
 
 transmogrify.siteanalyser.urltidy
 =================================
@@ -91,22 +125,6 @@ Options:
   New line seperated list of strings which won't be use as titles. Defaults to 'next','previous'
 
 
-transmogrify.siteanalyser.sitemapper
-====================================
-Rearrange content based on snippets of html arranged as a navigation tree or sitemap.
-A navigation tree is a set of href links arranged in nested html.
-
-Options:
-
-:field:
-  Name of a field from item which contains a sitemap
-
-:field_expr:
-  Expression to determine the field which contains a sitemap
-
-:condition:
-  Don't move this item
-
 transmogrify.siteanalyser.hidefromnav
 =====================================
 
@@ -181,6 +199,19 @@ called '_origin' and put the old path into that. Once you pass it through
 the relinker all href, img tags etc will be changed in any html content where they
 pointed to content that has since moved. All '_origin' fields will be removed
 after relinking.
+
+Options:
+
+:ignore_duplicates:
+  If 'True' there won't be an error raised when two items were redirected from the same place. This can occur with
+  some CMS's where content can be in different urls in the site
+
+:broken_link_normalise:
+  TAL expressions, each on a new line, which take 'url' from inside the html and returns a link that will match one of
+  the existing links in the site. Must return the full url, not the path. This is useful when many different links
+  could go to the same content.
+
+
 
 transmogrify.pathsorter
 ==================================

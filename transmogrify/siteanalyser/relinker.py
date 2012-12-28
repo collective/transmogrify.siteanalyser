@@ -1,7 +1,6 @@
 
 from zope.interface import implements
 from zope.interface import classProvides
-from zope.component import queryUtility
 
 from collective.transmogrifier.interfaces import ISectionBlueprint
 from collective.transmogrifier.interfaces import ISection
@@ -9,15 +8,11 @@ import urllib
 from lxml import etree
 import lxml
 from urlparse import urljoin
-import urllib
 from external.relative_url import relative_url
-from sys import stderr
 from collective.transmogrifier.utils import Expression
 import logging
-from external.normalize import urlnormalizer as normalizer
 import urlparse
-from sys import stderr
-#from plone.i18n.normalizer import urlnormalizer as normalizer
+import re
 
 
 class Counter:
@@ -32,6 +27,14 @@ class Relinker(object):
         self.previous = previous
         self.name = name
         self.logger = logging.getLogger(name)
+        self.ignore_duplicates = options.get('ignore_duplicates', 'False').lower() in ['true', 'on']
+        self.broken_link_normalise = []
+        for f in options.get('broken_link_normalise','').split('\n'):
+            f = f.strip()
+            if not f:
+                continue
+            expr = Expression(f, transmogrifier, name, options, re=re, urlparse=urlparse)
+            self.broken_link_normalise.append(expr)
 
     def __iter__(self):
         
@@ -62,7 +65,7 @@ class Relinker(object):
                 self.logger.debug("%s <- %s (relinked)" % (path, origin))
             link = urllib.unquote_plus(base+origin)
 
-            if link in changes:
+            if link in changes and not self.ignore_duplicates:
                 raise Exception("duplicate redirects: both '%s 'and '%s' were redirected from '%s'" %
                             (changes[link]['_path'], item['_path'], link))
 
@@ -116,8 +119,7 @@ class Relinker(object):
                 # have to put ./ in front of Link
                 item['remoteUrl'] = "./"+replace(link, item, changes, counter, self.missing, bad)
 
-            if item.get('_mimetype') in ['text/xhtml', 'text/html']:
-                self.relinkHTML(item, changes, counter, bad)
+            self.relinkHTML(item, changes, counter, bad)
 
             del item['_origin']
             #rewrite the backlinks too
@@ -158,7 +160,7 @@ class Relinker(object):
                     pass
 
         missing = set([])
-        item_replace = lambda link: replace(link, item, changes, counter, missing, bad)
+        item_replace = lambda link: replace(link, item, changes, counter, missing, bad, self.broken_link_normalise)
         self.missing = self.missing.union(missing)
         if missing:
             self.bad_pages += 1
@@ -189,7 +191,11 @@ def swapfragment(link, newfragment):
     link = urlparse.urlunparse(t)
     return link, fragment
 
-def replace(link, item, changes, counter, missing, bad):
+def removeprotocol(url):
+    t = urlparse.urlparse(url)
+    return urlparse.urlunparse(['']+list(t[1:]))
+
+def replace(link, item, changes, counter, missing, bad, normalisers):
     path = item['_path']
     newbase = item['_site_url']+path
 
@@ -198,6 +204,12 @@ def replace(link, item, changes, counter, missing, bad):
     linked = changes.get(link)
     if not linked:
         linked = changes.get(urllib.unquote_plus(link))
+    if not linked:
+        for norm in normalisers:
+            linked = changes.get( norm(item, url=link) )
+            if linked:
+                break
+
 
     if linked:
         linkedurl = item['_site_url']+linked['_path']

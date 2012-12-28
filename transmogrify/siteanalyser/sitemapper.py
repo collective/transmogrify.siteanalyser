@@ -44,6 +44,7 @@ class SiteMapper(object):
         self.convert_to_folders = False
         self.exclusion = options.get('exclude-from-navigation-key', 'exclude-from-navigation')
         self.title_key = options.get('title-key','title')
+        self.post_sub = [ s.strip() for s in options.get('path_sub', options.get('post-sub','')).split('\n') if s.strip()]
 
         self.name = name
         self.logger = logging.getLogger(name)
@@ -273,6 +274,14 @@ class SiteMapper(object):
                     moved += 1
             if newpath and self.title_key and self.title_key not in item:
                 item[self.title_key] = newpath.split('/')[-1]
+
+            for sub in self.post_sub:
+#                import pdb; pdb.set_trace()
+                reg,sub = sub.split(num=1)
+                match = re.match(reg, item['path'])
+                if match:
+                    item['path'] = match.sub(sub)
+                    break
 
             if not matched:
                 if self.exclusion:

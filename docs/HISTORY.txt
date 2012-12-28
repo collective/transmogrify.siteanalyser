@@ -1,11 +1,18 @@
 Changelog
 =========
 
-1.2.1dev (Unreleased)
+1.3 (Unreleased)
 ---------------------
 
+- added sitemapper blueprint
 - converted text to unicode baseNormalize because decomposition needs unicode valute to works properly [gborelli]
 - add ignore_re attribute in Backlinks title for ignore regular expression condition [ivanteoh]
+- add 'ignore_duplicates' and 'broken_link_normalise' to relinker [djay]
+- added invalid_ids option [ivanteoh]
+- relinker relinks any field which contains '<' and additional specififed fields [djay]
+- cleaned up logging [djay]
+- fixed relinking of defaultpages [djay]
+- titles from backlinks must be unique to be used [djay]
 
 1.2 (2012-04-28)
 ----------------
