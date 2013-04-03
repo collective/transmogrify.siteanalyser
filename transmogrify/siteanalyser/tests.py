@@ -110,7 +110,7 @@ def setUp(test):
 
     import zope.component
     import collective.transmogrifier.sections
-    zcml.load_config('meta.zcml', zope.app.component)
+    zcml.load_config('meta.zcml', zope.component)
     zcml.load_config('configure.zcml', collective.transmogrifier.sections)
 
     test.globs['plone'].portal_transforms = MockPortalTransforms()

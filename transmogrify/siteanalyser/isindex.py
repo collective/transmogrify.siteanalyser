@@ -144,8 +144,8 @@ class IsIndex(object):
                     item['_path'] = new_path
                     item.setdefault('_origin', path)
                     self.moved[path] = item['_path']
-                    logger.log(logging.DEBUG, u"moved %s to %s/%s" % (path,
-                               parent_path, new_id))
+                    self.logger.log(logging.DEBUG, u"moved %s to %s/%s" % (
+                                        path, parent_path, new_id))
                     del items[path]
                     yield item
             else:
@@ -252,7 +252,7 @@ class IsIndex(object):
                 
             self.moved[path] = item['_path']
             msg = "moved %s to %s/%s" % (path, dir, file)
-            logger.log(logging.DEBUG, msg)
+            self.logger.log(logging.DEBUG, msg)
 
     def isindex(self, count, links):
         return count >= self.min_links and \
