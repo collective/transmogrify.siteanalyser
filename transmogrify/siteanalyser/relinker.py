@@ -141,7 +141,7 @@ class Relinker(object):
             if 'remoteUrl' in item:
                 link = item['_site_url'] + urljoin(item['_origin'], item['remoteUrl'])
                 # have to put ./ in front of Link
-                item['remoteUrl'] = "./" + replace(link, item, changes, counter, self.missing, bad)
+                item['remoteUrl'] = "./" + replace(link, item, changes, counter, self.missing, bad, self.broken_link_normalise)
 
             self.relinkHTML(item, changes, counter, bad)
 
