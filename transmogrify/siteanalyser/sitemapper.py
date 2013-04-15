@@ -439,7 +439,7 @@ class SiteMapper(object):
                         if not url.startswith(base):
                             #it's an external link
                             pass
-                        elif path == '':
+                        elif path in ('', '#'):
                             # it's home, lets skip
                             pass
                         elif path in found_paths:
