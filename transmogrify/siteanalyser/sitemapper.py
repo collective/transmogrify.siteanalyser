@@ -427,6 +427,8 @@ class SiteMapper(object):
 
                     # collect text inside the a
                     if elem.tag == 'a':
+                        if nested:
+                            parents = [(d,p) for d,p in parents if d<depth]
 
                         href = elem.attrib.get('href')
                         url = ''
@@ -453,8 +455,6 @@ class SiteMapper(object):
                             else:
                                 id = text
 
-                            if nested:
-                                parents = [(d,p) for d,p in parents if d<depth]
                             parents = parents + [(depth,id)]
                             relpath = '/'.join([p for d,p in parents])
                             #if base_path:
