@@ -454,12 +454,12 @@ class SiteMapper(object):
                             else:
                                 id = text
 
-                            parents = parents + [(depth,id)]
-                            relpath = '/'.join([p for d,p in parents])
+                            parents = parents + [(depth, id)]
+                            relpath = '/'.join([p for d, p in parents])
                             #if base_path:
                             #    relpath = '/'.join([base_path,relpath])
 
-                            newpaths.append( (path, relpath) )
+                            newpaths.append((path, relpath))
                             #newpaths.append( (path, relpath) )
                     elif not isinstance(elem.tag, basestring):
                         # it's a comment
@@ -469,7 +469,8 @@ class SiteMapper(object):
 
                     text = ''
                     if use_text and elem.tail:
-                        text = ' '.join([text]+elem.tail.replace('/',' ').split()).strip()
+                        text = ' '.join([text] + elem.tail.replace(
+                            '/', ' ').split()).strip()
 
                     if nested:
                         depth -= 1
