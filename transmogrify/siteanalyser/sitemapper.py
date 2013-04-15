@@ -405,7 +405,6 @@ class SiteMapper(object):
             node = fragment_fromstring(html, create_parent=True)
             parents = []
             depth = 0
-            lastdepth = 0
             found_paths = {}
             context = etree.iterwalk(node, events=("start", "end"))
 
@@ -462,7 +461,6 @@ class SiteMapper(object):
 
                             newpaths.append( (path, relpath) )
                             #newpaths.append( (path, relpath) )
-                            lastdepth = depth
                     elif not isinstance(elem.tag, basestring):
                         # it's a comment
                         pass
